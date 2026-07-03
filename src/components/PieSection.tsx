@@ -3,35 +3,43 @@ import type { DateRange } from '../lib/api';
 import { SourceChart } from './SourceChart';
 import { ModelChart } from './ModelChart';
 
-// Local (UTC+3 on this machine) YYYY-MM-DD — not toISOString, which is UTC.
-function fmt(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+// Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" — matches <input type="datetime-local">.
+// We format in local time (not toISOString, which is UTC).
+function fmtDT(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-function daysAgo(n: number): Date { const d = new Date(); d.setDate(d.getDate() - n); return d; }
-function lastFriday(): Date {
-  const d = new Date();
-  const diff = (d.getDay() - 5 + 7) % 7; // Fri = 5; Claude's weekly limits reset Friday
+function atStart(d: Date): Date { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
+function daysAgo(n: number): Date { const d = new Date(); d.setDate(d.getDate() - n); return atStart(d); }
+function monthStart(): Date { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); }
+// Most recent Claude weekly reset: Friday 01:00 local (UTC+3). If this week's
+// Friday 01:00 hasn't happened yet, step back to the previous Friday.
+function lastFridayReset(): Date {
+  const now = new Date();
+  const d = new Date(now);
+  const diff = (d.getDay() - 5 + 7) % 7; // Fri = 5
   d.setDate(d.getDate() - diff);
+  d.setHours(1, 0, 0, 0);
+  if (d.getTime() > now.getTime()) d.setDate(d.getDate() - 7);
   return d;
 }
-function monthStart(): Date { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); }
 
 type PresetKey = 'all' | 'week' | '7d' | '30d' | 'month' | 'custom';
 
 const PRESETS: { key: PresetKey; label: string; range: () => DateRange }[] = [
   { key: 'all', label: 'Все время', range: () => ({}) },
-  { key: 'week', label: 'Неделя (с пт)', range: () => ({ from: fmt(lastFriday()), to: fmt(new Date()) }) },
-  { key: '7d', label: '7 дней', range: () => ({ from: fmt(daysAgo(6)), to: fmt(new Date()) }) },
-  { key: '30d', label: '30 дней', range: () => ({ from: fmt(daysAgo(29)), to: fmt(new Date()) }) },
-  { key: 'month', label: 'Этот месяц', range: () => ({ from: fmt(monthStart()), to: fmt(new Date()) }) },
+  { key: 'week', label: 'Неделя (пт 01:00)', range: () => ({ from: fmtDT(lastFridayReset()), to: fmtDT(new Date()) }) },
+  { key: '7d', label: '7 дней', range: () => ({ from: fmtDT(daysAgo(6)), to: fmtDT(new Date()) }) },
+  { key: '30d', label: '30 дней', range: () => ({ from: fmtDT(daysAgo(29)), to: fmtDT(new Date()) }) },
+  { key: 'month', label: 'Этот месяц', range: () => ({ from: fmtDT(monthStart()), to: fmtDT(new Date()) }) },
 ];
 
+const WEEK_PRESET = PRESETS.find((p) => p.key === 'week')!;
+
 export function PieSection() {
-  const [range, setRange] = useState<DateRange>({});
-  const [preset, setPreset] = useState<PresetKey>('all');
+  // Default to the current weekly window (Friday 01:00 → now).
+  const [range, setRange] = useState<DateRange>(() => WEEK_PRESET.range());
+  const [preset, setPreset] = useState<PresetKey>('week');
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     setPreset(p.key);
@@ -70,7 +78,7 @@ export function PieSection() {
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <input
-            type="date"
+            type="datetime-local"
             value={range.from || ''}
             max={range.to || undefined}
             onChange={(e) => setBound('from', e.target.value)}
@@ -79,7 +87,7 @@ export function PieSection() {
           />
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>→</span>
           <input
-            type="date"
+            type="datetime-local"
             value={range.to || ''}
             min={range.from || undefined}
             onChange={(e) => setBound('to', e.target.value)}
