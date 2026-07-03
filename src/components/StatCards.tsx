@@ -20,13 +20,13 @@ export function StatCards({ summary }: { summary: Summary }) {
         label="Avg / Day"
         value={`$${summary.avg_per_active_day.toFixed(2)}`}
         color="var(--accent-green)"
-        hint={`за ${summary.active_days} активных дн.`}
+        hint={`медиана $${summary.median_per_active_day.toFixed(2)} · ${summary.active_days} дн.`}
       />
       <StatCard
         label="Avg / Month"
         value={`$${summary.avg_per_active_month.toFixed(2)}`}
         color="var(--accent-orange)"
-        hint={`за ${summary.active_months} активных мес.`}
+        hint={`медиана $${summary.median_per_active_month.toFixed(2)} · ${summary.active_months} мес.`}
       />
       <StatCard label="All Time" value={`$${summary.totals.grand_total.toFixed(2)}`} color="var(--accent-yellow)" />
       <StatCard label="Sessions" value={String(summary.session_counts.total)} color="var(--accent-red)" />
