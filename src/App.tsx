@@ -3,8 +3,7 @@ import { useApi } from './hooks/useApi';
 import { api } from './lib/api';
 import { StatCards } from './components/StatCards';
 import { DailyChart } from './components/DailyChart';
-import { SourceChart } from './components/SourceChart';
-import { ModelChart } from './components/ModelChart';
+import { PieSection } from './components/PieSection';
 import { Heatmap } from './components/Heatmap';
 import { SessionTable } from './components/SessionTable';
 import { ProjectsTable } from './components/ProjectsTable';
@@ -76,10 +75,7 @@ export default function App() {
             {tab === 'dashboard' && (
               <>
                 <DailyChart />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <SourceChart />
-                  <ModelChart />
-                </div>
+                <PieSection />
                 <Heatmap />
               </>
             )}

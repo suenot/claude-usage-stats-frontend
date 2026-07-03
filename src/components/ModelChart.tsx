@@ -1,7 +1,7 @@
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useApi } from '../hooks/useApi';
-import { api } from '../lib/api';
+import { api, type DateRange } from '../lib/api';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -42,12 +42,20 @@ function shade(hex: string, factor: number): string {
   return `#${to2(mix(r))}${to2(mix(g))}${to2(mix(b))}`;
 }
 
-export function ModelChart() {
-  const { data, loading } = useApi(() => api.getModels(), []);
+export function ModelChart({ range }: { range?: DateRange }) {
+  const { data, loading } = useApi(() => api.getModels(range), [range?.from, range?.to]);
   if (loading || !data) return <div className="h-64 animate-pulse rounded-xl" style={{ background: 'var(--bg-card)' }} />;
 
   // Keep each model as-is (from the logs), largest cost first.
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
+        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>By Model</h3>
+        <div className="h-56 flex items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>Нет данных за выбранный период</div>
+      </div>
+    );
+  }
 
   // Assign a shade per model, centered on its family's base color.
   const familyCounts: Record<string, number> = {};

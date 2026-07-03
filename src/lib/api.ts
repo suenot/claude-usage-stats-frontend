@@ -59,6 +59,20 @@ export interface ProjectEntry {
   models: string[];
 }
 
+export interface DateRange {
+  from?: string;
+  to?: string;
+}
+
+function rangeQs(range?: DateRange): string {
+  if (!range) return '';
+  const p = new URLSearchParams();
+  if (range.from) p.set('from', range.from);
+  if (range.to) p.set('to', range.to);
+  const qs = p.toString();
+  return qs ? `?${qs}` : '';
+}
+
 export const api = {
   getSummary: () => fetchJson<Summary>('/summary'),
   getSessions: (params?: Record<string, string>) => {
@@ -68,7 +82,7 @@ export const api = {
   getProjects: () => fetchJson<ProjectEntry[]>('/projects'),
   getDailyChart: (days = 30) => fetchJson<DailyChartEntry[]>(`/charts/daily?days=${days}`),
   getHeatmap: () => fetchJson<HeatmapEntry[]>('/charts/heatmap'),
-  getSources: () => fetchJson<Record<string, number>>('/charts/sources'),
-  getModels: () => fetchJson<Record<string, number>>('/charts/models'),
+  getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
+  getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),
 };
