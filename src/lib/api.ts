@@ -50,8 +50,19 @@ export interface DailyChartEntry {
   sources: Record<string, number>;
 }
 
+export interface DailyModelEntry {
+  date: string;
+  models: Record<string, number>;
+}
+
 export interface HeatmapEntry {
   date: string;
+  hour: number;
+  cost: number;
+  sessions: number;
+}
+
+export interface HourlyEntry {
   hour: number;
   cost: number;
   sessions: number;
@@ -87,7 +98,9 @@ export const api = {
   },
   getProjects: () => fetchJson<ProjectEntry[]>('/projects'),
   getDailyChart: (days = 30) => fetchJson<DailyChartEntry[]>(`/charts/daily?days=${days}`),
+  getDailyModels: (days = 30) => fetchJson<DailyModelEntry[]>(`/charts/daily-models?days=${days}`),
   getHeatmap: () => fetchJson<HeatmapEntry[]>('/charts/heatmap'),
+  getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),

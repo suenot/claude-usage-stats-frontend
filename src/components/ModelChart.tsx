@@ -12,11 +12,13 @@ const FAMILY_BASE: Record<string, string> = {
   sonnet: '#60a5fa',
   haiku: '#34d399',
   fable: '#f472b6',
+  glm: '#22d3ee',
   unknown: '#64748b',
 };
 
 function getFamily(model: string): string {
   const m = model.toLowerCase();
+  if (m.includes('glm')) return 'glm';
   if (m.includes('opus')) return 'opus';
   if (m.includes('sonnet')) return 'sonnet';
   if (m.includes('haiku')) return 'haiku';
@@ -27,7 +29,7 @@ function getFamily(model: string): string {
 // Human-readable label: drop the redundant `claude-` prefix and any trailing
 // build date (e.g. `-20251001`), keeping the real model id from the logs.
 function cleanLabel(model: string): string {
-  if (model === 'unknown') return 'unknown';
+  if (model === 'GLM 5.2') return 'GLM 5.2';
   return model.replace(/^claude-/, '').replace(/-\d{8}$/, '');
 }
 

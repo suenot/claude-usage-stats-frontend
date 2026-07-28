@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { DateRange } from '../lib/api';
 import { SourceChart } from './SourceChart';
 import { ModelChart } from './ModelChart';
+import { HourlyChart } from './HourlyChart';
 
 // Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" — matches <input type="datetime-local">.
 // We format in local time (not toISOString, which is UTC).
@@ -34,12 +35,10 @@ const PRESETS: { key: PresetKey; label: string; range: () => DateRange }[] = [
   { key: 'month', label: 'Этот месяц', range: () => ({ from: fmtDT(monthStart()), to: fmtDT(new Date()) }) },
 ];
 
-const WEEK_PRESET = PRESETS.find((p) => p.key === 'week')!;
-
-export function PieSection() {
-  // Default to the current weekly window (Friday 01:00 → now).
-  const [range, setRange] = useState<DateRange>(() => WEEK_PRESET.range());
-  const [preset, setPreset] = useState<PresetKey>('week');
+export function PieSection({ range, setRange }: { range: DateRange; setRange: (r: DateRange) => void }) {
+  // `range` is owned by App so the daily-chart slider and the presets stay in
+  // sync. Local `preset` only tracks which preset button is highlighted.
+  const [preset, setPreset] = useState<PresetKey>('all');
 
   const applyPreset = (p: typeof PRESETS[number]) => {
     setPreset(p.key);
@@ -47,7 +46,7 @@ export function PieSection() {
   };
   const setBound = (key: 'from' | 'to', value: string) => {
     setPreset('custom');
-    setRange((r) => ({ ...r, [key]: value || undefined }));
+    setRange({ ...range, [key]: value || undefined });
   };
 
   const inputStyle = {
@@ -101,6 +100,8 @@ export function PieSection() {
         <SourceChart range={range} />
         <ModelChart range={range} />
       </div>
+
+      <HourlyChart range={range} />
     </div>
   );
 }

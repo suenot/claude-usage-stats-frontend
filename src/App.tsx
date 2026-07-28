@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApi } from './hooks/useApi';
-import { api } from './lib/api';
+import { api, type DateRange } from './lib/api';
 import { StatCards } from './components/StatCards';
 import { DailyChart } from './components/DailyChart';
 import { PieSection } from './components/PieSection';
@@ -14,6 +14,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const { data: summary, loading, refetch } = useApi(() => api.getSummary(), []);
   const [refreshing, setRefreshing] = useState(false);
+  // Shared date range — selected on the daily chart, consumed by pies + hourly.
+  const [range, setRange] = useState<DateRange>({});
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -74,8 +76,8 @@ export default function App() {
 
             {tab === 'dashboard' && (
               <>
-                <DailyChart />
-                <PieSection />
+                <DailyChart range={range} onRangeChange={setRange} />
+                <PieSection range={range} setRange={setRange} />
                 <Heatmap />
               </>
             )}
