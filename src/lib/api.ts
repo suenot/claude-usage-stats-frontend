@@ -73,6 +73,29 @@ export interface HourlyEntry {
   cache_write: number;
 }
 
+export interface CacheModelRow {
+  model: string;
+  actual: number;
+  saved: number;
+  cache_read: number;
+  hit_rate: number;
+}
+
+export interface CacheStats {
+  actual_cost: number;
+  // What the same traffic would have cost with every cached token billed as
+  // fresh input.
+  no_cache_cost: number;
+  saved: number;
+  saved_pct: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read: number;
+  cache_write: number;
+  hit_rate: number;
+  by_model: CacheModelRow[];
+}
+
 export interface ProjectEntry {
   cwd: string;
   cost: number;
@@ -106,6 +129,7 @@ export const api = {
   getDailyModels: (days = 30) => fetchJson<DailyModelEntry[]>(`/charts/daily-models?days=${days}`),
   getHeatmap: () => fetchJson<HeatmapEntry[]>('/charts/heatmap'),
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
+  getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),
