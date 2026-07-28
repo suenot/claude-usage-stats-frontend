@@ -36,16 +36,19 @@ const PRESETS: { key: PresetKey; label: string; range: () => DateRange }[] = [
 ];
 
 export function PieSection({ range, setRange }: { range: DateRange; setRange: (r: DateRange) => void }) {
-  // `range` is owned by App so the daily-chart slider and the presets stay in
-  // sync. Local `preset` only tracks which preset button is highlighted.
-  const [preset, setPreset] = useState<PresetKey>('all');
+  // `range` is owned by App so the daily chart and the presets stay in sync.
+  // We remember which preset produced which bounds; once the range moves on
+  // (chart drag, manual input), nothing is highlighted — otherwise a stale
+  // "Все время" chip would claim a window it no longer describes.
+  const [applied, setApplied] = useState<{ key: PresetKey } & DateRange>({ key: 'all' });
+  const active: PresetKey = applied.from === range.from && applied.to === range.to ? applied.key : 'custom';
 
   const applyPreset = (p: typeof PRESETS[number]) => {
-    setPreset(p.key);
-    setRange(p.range());
+    const r = p.range();
+    setApplied({ key: p.key, ...r });
+    setRange(r);
   };
   const setBound = (key: 'from' | 'to', value: string) => {
-    setPreset('custom');
     setRange({ ...range, [key]: value || undefined });
   };
 
@@ -67,8 +70,8 @@ export function PieSection({ range, setRange }: { range: DateRange; setRange: (r
               onClick={() => applyPreset(p)}
               className="px-2.5 py-1 text-xs rounded-md transition-colors"
               style={{
-                background: preset === p.key ? 'var(--accent-blue)' : 'var(--bg-secondary)',
-                color: preset === p.key ? '#fff' : 'var(--text-secondary)',
+                background: active === p.key ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                color: active === p.key ? '#fff' : 'var(--text-secondary)',
               }}
             >
               {p.label}
