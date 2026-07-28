@@ -65,7 +65,12 @@ export interface HeatmapEntry {
 export interface HourlyEntry {
   hour: number;
   cost: number;
+  // Sessions active during the hour — a long session counts in every hour it spans.
   sessions: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read: number;
+  cache_write: number;
 }
 
 export interface ProjectEntry {
