@@ -7,8 +7,9 @@ import { PieSection } from './components/PieSection';
 import { Heatmap } from './components/Heatmap';
 import { SessionTable } from './components/SessionTable';
 import { ProjectsTable } from './components/ProjectsTable';
+import { ModelPricingTable } from './components/ModelPricingTable';
 
-type Tab = 'dashboard' | 'sessions' | 'projects';
+type Tab = 'dashboard' | 'sessions' | 'projects' | 'models';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
@@ -40,7 +41,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-4">
             <nav className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
-              {(['dashboard', 'sessions', 'projects'] as Tab[]).map(t => (
+              {(['dashboard', 'sessions', 'projects', 'models'] as Tab[]).map(t => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
@@ -54,21 +55,23 @@ export default function App() {
                 </button>
               ))}
             </nav>
-            <button
+            {tab !== 'models' && <button
               onClick={handleRefresh}
               disabled={refreshing}
               className="px-3 py-1.5 text-sm rounded-lg transition-colors"
               style={{ background: 'rgba(34,211,238,0.1)', color: 'var(--accent-cyan)' }}
             >
               {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
+            </button>}
           </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {loading || !summary ? (
+        {tab === 'models' ? (
+          <ModelPricingTable />
+        ) : loading || !summary ? (
           <div className="text-center py-20" style={{ color: 'var(--text-secondary)' }}>Loading data...</div>
         ) : (
           <>

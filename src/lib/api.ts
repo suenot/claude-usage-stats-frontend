@@ -124,6 +124,25 @@ export interface ProjectEntry {
   models: string[];
 }
 
+export interface ModelPrice {
+  id: string;
+  name: string;
+  provider: string;
+  contextLength: number | null;
+  hasPricingOverrides: boolean;
+  inputPerMillion: number | null;
+  outputPerMillion: number | null;
+  cacheReadPerMillion: number | null;
+  cacheWritePerMillion: number | null;
+}
+
+export interface ModelPricingResponse {
+  source: 'OpenRouter';
+  fetchedAt: string;
+  stale: boolean;
+  models: ModelPrice[];
+}
+
 export interface DateRange {
   from?: string;
   to?: string;
@@ -157,5 +176,6 @@ export const api = {
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
   getSourceUsage: (range?: DateRange) => fetchJson<Record<string, { cost: number; sessions: number; tokens: number }>>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
+  getModelPricing: (force = false) => fetchJson<ModelPricingResponse>(`/models/pricing${force ? '?refresh=1' : ''}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),
 };
