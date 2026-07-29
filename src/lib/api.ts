@@ -56,6 +56,25 @@ export interface DailyModelEntry {
   tokens: Record<string, number>;
 }
 
+export type HistoryTimeframe = '1d' | '1h';
+export type HistoryGroupBy = 'harness' | 'model';
+
+export interface HistoryValue {
+  usd: number;
+  tokens: number;
+}
+
+export interface HistoryBucket {
+  timestamp: string;
+  values: Record<string, HistoryValue>;
+}
+
+export interface HistoryChartResponse {
+  timeframe: HistoryTimeframe;
+  groupBy: HistoryGroupBy;
+  buckets: HistoryBucket[];
+}
+
 export interface HeatmapEntry {
   date: string;
   hour: number;
@@ -128,6 +147,10 @@ export const api = {
   getProjects: () => fetchJson<ProjectEntry[]>('/projects'),
   getDailyChart: (days = 30) => fetchJson<DailyChartEntry[]>(`/charts/daily?days=${days}`),
   getDailyModels: (days = 30) => fetchJson<DailyModelEntry[]>(`/charts/daily-models?days=${days}`),
+  getHistory: (timeframe: HistoryTimeframe, groupBy: HistoryGroupBy, days = 0) => {
+    const qs = new URLSearchParams({ timeframe, groupBy, days: String(days) });
+    return fetchJson<HistoryChartResponse>(`/charts/history?${qs}`);
+  },
   getHeatmap: () => fetchJson<HeatmapEntry[]>('/charts/heatmap'),
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
