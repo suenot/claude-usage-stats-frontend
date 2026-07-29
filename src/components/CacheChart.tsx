@@ -1,14 +1,6 @@
 import { useApi } from '../hooks/useApi';
 import { api, type DateRange } from '../lib/api';
-
-const MODEL_COLORS: Record<string, string> = {
-  'Opus': '#a78bfa',
-  'Sonnet': '#60a5fa',
-  'Haiku': '#34d399',
-  'Fable': '#f472b6',
-  'GLM 5.2': '#22d3ee',
-};
-const colorFor = (model: string) => MODEL_COLORS[model] || '#94a3b8';
+import { colorForModel } from '../lib/model-colors';
 
 const dollars = (v: number) => `$${Math.round(v).toLocaleString('ru-RU')}`;
 function fmtTokens(n: number): string {
@@ -95,12 +87,12 @@ export function CacheChart({ range }: { range?: DateRange }) {
       <div className="space-y-1.5">
         {data.by_model.map(m => (
           <div key={m.model} className="flex items-center gap-3 text-xs">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: colorFor(m.model) }} />
+            <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: colorForModel(m.model) }} />
             <span className="w-16 shrink-0" style={{ color: 'var(--text-secondary)' }}>{m.model}</span>
             <div className="flex-1 h-2 rounded-full" style={{ background: 'rgba(148,163,184,0.1)' }}>
               <div
                 className="h-2 rounded-full"
-                style={{ width: `${Math.max((m.saved / maxSaved) * 100, 0.5)}%`, background: colorFor(m.model) }}
+                style={{ width: `${Math.max((m.saved / maxSaved) * 100, 0.5)}%`, background: colorForModel(m.model) }}
               />
             </div>
             <span className="font-mono w-20 text-right shrink-0" style={{ color: 'var(--text-primary)' }}>{dollars(m.saved)}</span>

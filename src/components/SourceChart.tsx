@@ -2,10 +2,9 @@ import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useApi } from '../hooks/useApi';
 import { api, type DateRange } from '../lib/api';
+import { colorForSource } from '../lib/model-colors';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
-
-const COLORS = ['#60a5fa', '#a78bfa', '#22d3ee', '#34d399', '#fbbf24', '#f87171', '#fb923c', '#e879f9', '#94a3b8'];
 
 export function SourceChart({ range }: { range?: DateRange }) {
   const { data, loading } = useApi(() => api.getSources(range), [range?.from, range?.to]);
@@ -30,7 +29,7 @@ export function SourceChart({ range }: { range?: DateRange }) {
           labels: entries.map(([k]) => k),
           datasets: [{
             data: entries.map(([, v]) => v),
-            backgroundColor: COLORS.slice(0, entries.length),
+            backgroundColor: entries.map(([source]) => colorForSource(source)),
             borderWidth: 0,
           }],
         }}

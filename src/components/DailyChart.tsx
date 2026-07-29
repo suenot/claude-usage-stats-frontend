@@ -6,18 +6,9 @@ import {
 } from 'chart.js';
 import { useApi } from '../hooks/useApi';
 import { api, type DailyModelEntry, type DateRange } from '../lib/api';
+import { colorForModel, colorForSource } from '../lib/model-colors';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip);
-
-const MODEL_COLORS: Record<string, string> = {
-  'Opus': '#a78bfa',
-  'Sonnet': '#60a5fa',
-  'Haiku': '#34d399',
-  'Fable': '#f472b6',
-  'GLM 5.2': '#22d3ee',
-};
-const colorFor = (model: string) => MODEL_COLORS[model] || '#94a3b8';
-const sourceColor = (source: string) => source === 'Codex' ? '#10a37f' : colorFor(source);
 
 // Same hue, low alpha — used to grey out bars outside the selected range.
 function fade(hex: string, alpha: number): string {
@@ -168,7 +159,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
       label: m,
       data: days.map(d => (metric === 'usd' ? d.models[m] : (d.tokens[m] || 0) / 1_000_000) || 0),
       backgroundColor: days.map(d => {
-        const color = metric === 'usd' ? colorFor(m) : sourceColor(m);
+        const color = metric === 'usd' ? colorForModel(m) : colorForSource(m);
         return hasRange && !inRange(d.date) ? fade(color, 0.16) : color;
       }),
       borderRadius: 2,
@@ -233,7 +224,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
               style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', opacity: off ? 0.4 : 1 }}
               title={off ? 'Показать' : 'Скрыть'}
             >
-              <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: off ? '#64748b' : colorFor(m) }} />
+              <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: off ? '#64748b' : (metric === 'usd' ? colorForModel(m) : colorForSource(m)) }} />
               <span style={{ textDecoration: off ? 'line-through' : 'none' }}>{m}</span>
               <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{metric === 'usd' ? money(selPerModel[m] || 0) : `${((selPerModel[m] || 0) / 1_000_000).toFixed(1)}M`}</span>
             </button>
@@ -301,13 +292,6 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                   beginAtZero: true,
                   ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => metric === 'usd' ? money(Number(v)) : `${v}M` },
                   grid: { color: 'rgba(148,163,184,0.08)' },
-                  border: { display: false },
-                },
-                tokens: {
-                  position: 'right',
-                  beginAtZero: true,
-                  grid: { drawOnChartArea: false },
-                  ticks: { color: '#10a37f', font: { size: 10 }, callback: (v) => `${v}M` },
                   border: { display: false },
                 },
               },

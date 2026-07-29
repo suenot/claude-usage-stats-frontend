@@ -2,46 +2,15 @@ import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useApi } from '../hooks/useApi';
 import { api, type DateRange } from '../lib/api';
+import { colorForModel, modelFamilyFor, shade } from '../lib/model-colors';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
-
-// Base color per family; individual models get shades of it so different
-// versions stay visually related but distinguishable.
-const FAMILY_BASE: Record<string, string> = {
-  opus: '#a78bfa',
-  sonnet: '#60a5fa',
-  haiku: '#34d399',
-  fable: '#f472b6',
-  glm: '#22d3ee',
-  unknown: '#64748b',
-};
-
-function getFamily(model: string): string {
-  const m = model.toLowerCase();
-  if (m.includes('glm')) return 'glm';
-  if (m.includes('opus')) return 'opus';
-  if (m.includes('sonnet')) return 'sonnet';
-  if (m.includes('haiku')) return 'haiku';
-  if (m.includes('fable')) return 'fable';
-  return 'unknown';
-}
 
 // Human-readable label: drop the redundant `claude-` prefix and any trailing
 // build date (e.g. `-20251001`), keeping the real model id from the logs.
 function cleanLabel(model: string): string {
   if (model === 'GLM 5.2') return 'GLM 5.2';
   return model.replace(/^claude-/, '').replace(/-\d{8}$/, '');
-}
-
-// Mix a hex color toward white (factor > 0) or black (factor < 0).
-function shade(hex: string, factor: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
-  const t = factor < 0 ? 0 : 255;
-  const p = Math.abs(factor);
-  const mix = (c: number) => Math.round(c + (t - c) * p);
-  const to2 = (c: number) => c.toString(16).padStart(2, '0');
-  return `#${to2(mix(r))}${to2(mix(g))}${to2(mix(b))}`;
 }
 
 export function ModelChart({ range }: { range?: DateRange }) {
@@ -62,13 +31,13 @@ export function ModelChart({ range }: { range?: DateRange }) {
   // Assign a shade per model, centered on its family's base color.
   const familyCounts: Record<string, number> = {};
   for (const [model] of entries) {
-    const fam = getFamily(model);
+    const fam = modelFamilyFor(model);
     familyCounts[fam] = (familyCounts[fam] || 0) + 1;
   }
   const familySeen: Record<string, number> = {};
   const colors = entries.map(([model]) => {
-    const fam = getFamily(model);
-    const base = FAMILY_BASE[fam] || FAMILY_BASE.unknown;
+    const fam = modelFamilyFor(model);
+    const base = colorForModel(model);
     const total = familyCounts[fam];
     const i = familySeen[fam] = (familySeen[fam] || 0) + 1;
     if (total <= 1) return base;
