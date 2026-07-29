@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { useApi } from './hooks/useApi';
 import { api, type DateRange } from './lib/api';
 import { StatCards } from './components/StatCards';
@@ -8,15 +8,31 @@ import { Heatmap } from './components/Heatmap';
 import { SessionTable } from './components/SessionTable';
 import { ProjectsTable } from './components/ProjectsTable';
 import { ModelPricingTable } from './components/ModelPricingTable';
-
-type Tab = 'dashboard' | 'sessions' | 'projects' | 'models';
+import { pathForTab, shouldHandleSpaNavigation, tabFromPath, tabs, type Tab } from './lib/navigation';
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('dashboard');
+  const [tab, setTab] = useState<Tab>(() => (
+    typeof window === 'undefined' ? 'dashboard' : tabFromPath(window.location.pathname)
+  ));
   const { data: summary, loading, refetch } = useApi(() => api.getSummary(), []);
   const [refreshing, setRefreshing] = useState(false);
   // Shared date range — selected on the daily chart, consumed by pies + hourly.
   const [range, setRange] = useState<DateRange>({});
+
+  useEffect(() => {
+    const syncLocation = () => {
+      const nextTab = tabFromPath(window.location.pathname);
+      const canonicalPath = pathForTab(nextTab);
+      if (window.location.pathname !== canonicalPath) {
+        window.history.replaceState(null, '', canonicalPath);
+      }
+      setTab(nextTab);
+    };
+
+    syncLocation();
+    window.addEventListener('popstate', syncLocation);
+    return () => window.removeEventListener('popstate', syncLocation);
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -28,32 +44,46 @@ export default function App() {
     }
   };
 
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, nextTab: Tab) => {
+    if (!shouldHandleSpaNavigation(event)) return;
+    event.preventDefault();
+    const nextPath = pathForTab(nextTab);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+    setTab(nextTab);
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* Header */}
       <header className="border-b" style={{ borderColor: 'rgba(148,163,184,0.15)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))' }}>
               <span className="text-white font-bold text-sm">C</span>
             </div>
             <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Claude Usage Stats</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <nav className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
-              {(['dashboard', 'sessions', 'projects', 'models'] as Tab[]).map(t => (
-                <button
+          <div className="flex min-w-0 items-center gap-3 sm:flex-none">
+            <nav aria-label="Primary navigation" className="min-w-0 flex-1 overflow-x-auto rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
+              <div className="flex w-max gap-0.5 p-0.5 sm:gap-1 sm:p-1">
+              {tabs.map(t => (
+                <a
                   key={t}
-                  onClick={() => setTab(t)}
-                  className="px-3 py-1.5 text-sm rounded-md transition-colors capitalize"
+                  href={pathForTab(t)}
+                  onClick={event => navigate(event, t)}
+                  aria-current={tab === t ? 'page' : undefined}
+                  className="shrink-0 rounded-md px-2 py-1 text-xs capitalize transition-colors sm:px-3 sm:py-1.5 sm:text-sm"
                   style={{
                     background: tab === t ? 'var(--bg-primary)' : 'transparent',
                     color: tab === t ? 'var(--text-primary)' : 'var(--text-secondary)',
                   }}
                 >
                   {t}
-                </button>
+                </a>
               ))}
+              </div>
             </nav>
             {tab !== 'models' && <button
               onClick={handleRefresh}

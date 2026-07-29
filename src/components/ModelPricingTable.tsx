@@ -5,6 +5,7 @@ import {
   filterModelPrices,
   formatContext,
   formatPrice,
+  selectModelPrices,
   sortModelPrices,
   type ModelPriceSortKey,
 } from '../lib/model-pricing';
@@ -34,7 +35,6 @@ function SkeletonRows() {
 }
 
 function ModelName({ model }: { model: ModelPrice }) {
-  const noteId = `tiered-pricing-${model.id.replace(/[^a-z0-9]/gi, '-')}`;
   return (
     <td className="px-3 py-3 min-w-72">
       <div className="flex items-center gap-2">
@@ -42,13 +42,12 @@ function ModelName({ model }: { model: ModelPrice }) {
         {model.hasPricingOverrides && (
           <>
             <span
-              aria-describedby={noteId}
+              aria-describedby="tiered-pricing-note"
               className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
               style={{ background: 'rgba(251,191,36,0.12)', color: 'var(--accent-yellow)' }}
             >
               Tiered
             </span>
-            <span id={noteId} className="sr-only">Larger prompts can use different prices.</span>
           </>
         )}
       </div>
@@ -65,14 +64,23 @@ export function ModelPricingTable() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: ModelPriceSortKey; direction: 'asc' | 'desc' } | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [showAllModels, setShowAllModels] = useState(false);
   const { data, loading, error, refetch } = useApi(
     () => api.getModelPricing(refreshCount > 0),
     [refreshCount],
   );
+  const { data: usageModels, loading: usageLoading, error: usageError } = useApi(() => api.getModels(), []);
 
+  const catalogModels = useMemo(() => (
+    data && (showAllModels || usageModels)
+      ? selectModelPrices(data.models, usageModels ?? {}, showAllModels)
+      : []
+  ), [data, showAllModels, usageModels]);
   const models = useMemo(() => (
-    data ? sortModelPrices(filterModelPrices(data.models, query), sort) : []
-  ), [data, query, sort]);
+    sortModelPrices(filterModelPrices(catalogModels, query), sort)
+  ), [catalogModels, query, sort]);
+  const waitingForUsage = Boolean(data) && !showAllModels && usageModels === null && usageLoading;
+  const loadingRows = (loading && !data) || waitingForUsage;
 
   const toggleSort = (key: ModelPriceSortKey) => {
     setSort(current => (
@@ -93,23 +101,28 @@ export function ModelPricingTable() {
           <h2 id="model-pricing-heading" className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Model pricing</h2>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>Live OpenRouter base prices · USD per 1M tokens</p>
           {data && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-              <a
-                href="https://openrouter.ai/models"
-                target="_blank"
-                rel="noreferrer"
-                className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
-                style={{ color: 'var(--accent-cyan)' }}
-              >
-                Source: OpenRouter
-              </a>
-              <span>Fetched {new Date(data.fetchedAt).toLocaleString()}</span>
-              {data.stale && (
-                <span className="rounded-full px-2 py-0.5 font-medium" style={{ background: 'rgba(251,191,36,0.12)', color: 'var(--accent-yellow)' }}>
-                  Cached snapshot
-                </span>
-              )}
-            </div>
+            <>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                <a
+                  href="https://openrouter.ai/models"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+                  style={{ color: 'var(--accent-cyan)' }}
+                >
+                  Source: OpenRouter
+                </a>
+                <span>Fetched {new Date(data.fetchedAt).toLocaleString()}</span>
+                {data.stale && (
+                  <span className="rounded-full px-2 py-0.5 font-medium" style={{ background: 'rgba(251,191,36,0.12)', color: 'var(--accent-yellow)' }}>
+                    Cached snapshot
+                  </span>
+                )}
+              </div>
+              <p id="tiered-pricing-note" className="mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Tiered models can use different prices for larger prompts.
+              </p>
+            </>
           )}
         </div>
         <button
@@ -147,8 +160,26 @@ export function ModelPricingTable() {
               className="w-full max-w-sm rounded-lg border px-3 py-2 text-sm outline-none focus:border-cyan-400"
               style={{ background: 'var(--bg-primary)', borderColor: 'rgba(148,163,184,0.25)', color: 'var(--text-primary)' }}
             />
-            <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{models.length} models</span>
+            <div className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={showAllModels}
+                  onChange={event => setShowAllModels(event.target.checked)}
+                  className="accent-cyan-400"
+                />
+                Show all OpenRouter models
+              </label>
+              <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                {data ? `${models.length} of ${data.models.length} models` : '0 models'}
+              </span>
+            </div>
           </div>
+          {usageError && !showAllModels && (
+            <p role="alert" className="px-5 pt-3 text-xs" style={{ color: 'var(--accent-yellow)' }}>
+              Local usage is unavailable. Turn on "Show all OpenRouter models" to browse the full catalog.
+            </p>
+          )}
 
           <div className="max-h-[70vh] overflow-auto">
             <table className="w-full min-w-[980px] border-collapse">
@@ -181,7 +212,7 @@ export function ModelPricingTable() {
                   })}
                 </tr>
               </thead>
-              {loading && !data ? <SkeletonRows /> : (
+              {loadingRows ? <SkeletonRows /> : (
                 <tbody>
                   {models.map(model => (
                     <tr key={model.id} className="transition-colors hover:bg-slate-700/30" style={{ borderBottom: '1px solid rgba(148,163,184,0.07)' }}>

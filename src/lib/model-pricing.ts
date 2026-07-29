@@ -15,6 +15,34 @@ export function filterModelPrices(models: ModelPrice[], query: string): ModelPri
     .some(value => value.toLocaleLowerCase().includes(normalizedQuery)));
 }
 
+export function normalizeModelId(value: string): string {
+  const modelId = value.split('/').pop() ?? value;
+  const normalized = modelId
+    .toLocaleLowerCase()
+    .replace(/[:._\s-]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return normalized.startsWith('claude-')
+    ? normalized.replace(/-\d{8}$/, '')
+    : normalized;
+}
+
+export function filterUsedModelPrices(
+  models: ModelPrice[],
+  usageModels: Record<string, number>,
+): ModelPrice[] {
+  const usedIds = new Set(Object.keys(usageModels).map(normalizeModelId));
+  return models.filter(model => usedIds.has(normalizeModelId(model.id)));
+}
+
+export function selectModelPrices(
+  models: ModelPrice[],
+  usageModels: Record<string, number>,
+  showAll: boolean,
+): ModelPrice[] {
+  return showAll ? [...models] : filterUsedModelPrices(models, usageModels);
+}
+
 export function sortModelPrices(
   models: ModelPrice[],
   sort: { key: ModelPriceSortKey; direction: 'asc' | 'desc' } | null,
