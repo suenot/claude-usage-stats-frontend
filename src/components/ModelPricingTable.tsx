@@ -150,7 +150,7 @@ export function ModelPricingTable() {
             <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{models.length} models</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="max-h-[70vh] overflow-auto">
             <table className="w-full min-w-[980px] border-collapse">
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
@@ -171,7 +171,6 @@ export function ModelPricingTable() {
                         <button
                           type="button"
                           aria-label={`Sort by ${column.label}`}
-                          aria-sort={sortState(column.key)}
                           onClick={() => toggleSort(column.key)}
                           className="font-inherit whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
                         >
