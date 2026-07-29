@@ -17,6 +17,7 @@ const MODEL_COLORS: Record<string, string> = {
   'GLM 5.2': '#22d3ee',
 };
 const colorFor = (model: string) => MODEL_COLORS[model] || '#94a3b8';
+const sourceColor = (source: string) => source === 'Codex' ? '#10a37f' : colorFor(source);
 
 // Same hue, low alpha — used to grey out bars outside the selected range.
 function fade(hex: string, alpha: number): string {
@@ -32,7 +33,8 @@ function fmtLong(date: string): string {
 const fmtShort = (date: string) => `${date.slice(8)}.${date.slice(5, 7)}`;
 const money = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(v < 10 ? 2 : 0)}`);
 
-interface Day { date: string; models: Record<string, number>; total: number }
+type Metric = 'usd' | 'tokens';
+interface Day { date: string; models: Record<string, number>; tokens: Record<string, number>; total: number; tokenTotal: number }
 
 // Backend pads the series with every calendar day from the first session to
 // today. Here that means 135 days for 27 with actual spend — a 3-month void
@@ -43,16 +45,18 @@ function compact(entries: DailyModelEntry[]): Day[] {
   const days: Day[] = entries.map(e => ({
     date: e.date,
     models: e.models,
+    tokens: e.tokens || {},
     total: Object.values(e.models).reduce((s, v) => s + v, 0),
+    tokenTotal: Object.values(e.tokens || {}).reduce((s, v) => s + v, 0),
   }));
   let head = 0;
-  while (head < days.length && days[head].total === 0) head++;
+  while (head < days.length && days[head].total === 0 && days[head].tokenTotal === 0) head++;
   let tail = days.length - 1;
-  while (tail >= 0 && days[tail].total === 0) tail--;
+  while (tail >= 0 && days[tail].total === 0 && days[tail].tokenTotal === 0) tail--;
 
   const out: Day[] = [];
   for (let i = head; i <= tail; i++) {
-    if (days[i].total > 0) { out.push(days[i]); continue; }
+    if (days[i].total > 0 || days[i].tokenTotal > 0) { out.push(days[i]); continue; }
     let a = i; while (a > head && days[a - 1].total === 0) a--;
     let b = i; while (b < tail && days[b + 1].total === 0) b++;
     if (b - a + 1 < 3) out.push(days[i]);
@@ -68,6 +72,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   const dragRef = useRef<{ startX: number; moved: boolean } | null>(null);
   const [drag, setDrag] = useState<{ left: number; right: number; days: number; total: number } | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [metric, setMetric] = useState<Metric>('usd');
 
   const days = useMemo(() => (data ? compact(data) : []), [data]);
 
@@ -75,9 +80,9 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   // each stack, so the visual baseline stays stable across days.
   const models = useMemo(() => {
     const totals: Record<string, number> = {};
-    for (const d of days) for (const [m, v] of Object.entries(d.models)) totals[m] = (totals[m] || 0) + v;
+    for (const d of days) for (const [m, v] of Object.entries(metric === 'usd' ? d.models : d.tokens)) totals[m] = (totals[m] || 0) + v;
     return Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
-  }, [days]);
+  }, [days, metric]);
 
   // Selection lives entirely in props: no chart→state→chart loop to guard.
   const from = range?.from?.slice(0, 10);
@@ -86,12 +91,12 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   const inRange = (date: string) => (!from || date >= from) && (!to || date <= to);
 
   const selected = useMemo(() => days.filter(d => inRange(d.date)), [days, from, to]);
-  const selTotal = selected.reduce((s, d) => s + d.total, 0);
+  const selTotal = selected.reduce((s, d) => s + (metric === 'usd' ? d.total : d.tokenTotal), 0);
   const selPerModel = useMemo(() => {
     const t: Record<string, number> = {};
-    for (const d of selected) for (const [m, v] of Object.entries(d.models)) t[m] = (t[m] || 0) + v;
+    for (const d of selected) for (const [m, v] of Object.entries(metric === 'usd' ? d.models : d.tokens)) t[m] = (t[m] || 0) + v;
     return t;
-  }, [selected]);
+  }, [selected, metric]);
 
   // --- drag-to-select -------------------------------------------------------
   // Bars sit on a category scale with default padding, so category i spans
@@ -158,14 +163,20 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   // --- chart config ---------------------------------------------------------
   const chartData = useMemo(() => ({
     labels: days.map(d => fmtShort(d.date)),
-    datasets: models.filter(m => !hidden.has(m)).map(m => ({
+    datasets: [
+      ...models.filter(m => !hidden.has(m)).map(m => ({
       label: m,
-      data: days.map(d => d.models[m] || 0),
-      backgroundColor: days.map(d => (hasRange && !inRange(d.date) ? fade(colorFor(m), 0.16) : colorFor(m))),
+      data: days.map(d => (metric === 'usd' ? d.models[m] : (d.tokens[m] || 0) / 1_000_000) || 0),
+      backgroundColor: days.map(d => {
+        const color = metric === 'usd' ? colorFor(m) : sourceColor(m);
+        return hasRange && !inRange(d.date) ? fade(color, 0.16) : color;
+      }),
       borderRadius: 2,
       maxBarThickness: 34,
-    })),
-  }), [days, models, hidden, from, to, hasRange]);
+      yAxisID: 'value',
+      })),
+    ],
+  }), [days, models, hidden, from, to, hasRange, metric]);
 
   const empty = !loading && days.length === 0;
 
@@ -173,11 +184,11 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
     <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
       <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Daily Spend by Model</h3>
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{metric === 'usd' ? 'Daily Spend by Model' : 'Daily Tokens by Source'}</h3>
           <div className="flex items-baseline gap-3 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-mono text-base" style={{ color: 'var(--accent-cyan)' }}>${selTotal.toFixed(2)}</span>
+            <span className="font-mono text-base" style={{ color: 'var(--accent-cyan)' }}>{metric === 'usd' ? `$${selTotal.toFixed(2)}` : `${(selTotal / 1_000_000).toFixed(1)}M`}</span>
             <span>за {selected.length} {selected.length === 1 ? 'день' : 'дн.'}</span>
-            {selected.length > 0 && <span>· ${(selTotal / selected.length).toFixed(2)} / день</span>}
+            {selected.length > 0 && <span>· {metric === 'usd' ? `$${(selTotal / selected.length).toFixed(2)}` : `${(selTotal / selected.length / 1_000_000).toFixed(1)}M`} / день</span>}
           </div>
         </div>
 
@@ -201,6 +212,13 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
 
       {/* Legend doubles as a per-model total for the selection and a series toggle. */}
       <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex rounded-md p-0.5 mr-2" style={{ background: 'var(--bg-secondary)' }}>
+          {(['usd', 'tokens'] as Metric[]).map(m => (
+            <button key={m} onClick={() => { setMetric(m); setHidden(new Set()); }} className="px-2.5 py-1 text-xs rounded" style={{ background: metric === m ? 'var(--accent-blue)' : 'transparent', color: metric === m ? '#fff' : 'var(--text-secondary)' }}>
+              {m === 'usd' ? 'USD' : 'Tokens'}
+            </button>
+          ))}
+        </div>
         {models.map(m => {
           const off = hidden.has(m);
           return (
@@ -217,7 +235,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
             >
               <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: off ? '#64748b' : colorFor(m) }} />
               <span style={{ textDecoration: off ? 'line-through' : 'none' }}>{m}</span>
-              <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{money(selPerModel[m] || 0)}</span>
+              <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{metric === 'usd' ? money(selPerModel[m] || 0) : `${((selPerModel[m] || 0) / 1_000_000).toFixed(1)}M`}</span>
             </button>
           );
         })}
@@ -264,10 +282,10 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                     title: (items: TooltipItem<'bar'>[]) => fmtLong(days[items[0].dataIndex].date),
                     label: (ctx: TooltipItem<'bar'>) => {
                       const v = typeof ctx.parsed.y === 'number' ? ctx.parsed.y : 0;
-                      return v > 0 ? ` ${ctx.dataset.label}: $${v.toFixed(2)}` : '';
+                      return v > 0 ? ` ${ctx.dataset.label}: ${metric === 'usd' ? `$${v.toFixed(2)}` : `${v.toFixed(2)}M`}` : '';
                     },
                     footer: (items: TooltipItem<'bar'>[]) =>
-                      `Всего: $${items.reduce((s, i) => s + (typeof i.parsed.y === 'number' ? i.parsed.y : 0), 0).toFixed(2)}`,
+                      `Всего: ${metric === 'usd' ? '$' : ''}${items.reduce((s, i) => s + (typeof i.parsed.y === 'number' ? i.parsed.y : 0), 0).toFixed(2)}${metric === 'tokens' ? 'M' : ''}`,
                   },
                 },
               },
@@ -277,11 +295,19 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                   ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 0, autoSkip: true, autoSkipPadding: 12 },
                   grid: { display: false },
                 },
-                y: {
+                value: {
+                  position: 'left',
                   stacked: true,
                   beginAtZero: true,
-                  ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => money(Number(v)) },
+                  ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => metric === 'usd' ? money(Number(v)) : `${v}M` },
                   grid: { color: 'rgba(148,163,184,0.08)' },
+                  border: { display: false },
+                },
+                tokens: {
+                  position: 'right',
+                  beginAtZero: true,
+                  grid: { drawOnChartArea: false },
+                  ticks: { color: '#10a37f', font: { size: 10 }, callback: (v) => `${v}M` },
                   border: { display: false },
                 },
               },

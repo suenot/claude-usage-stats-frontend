@@ -53,6 +53,7 @@ export interface DailyChartEntry {
 export interface DailyModelEntry {
   date: string;
   models: Record<string, number>;
+  tokens: Record<string, number>;
 }
 
 export interface HeatmapEntry {
