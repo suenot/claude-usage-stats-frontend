@@ -9,7 +9,8 @@ const COLORS = ['#60a5fa', '#a78bfa', '#22d3ee', '#34d399', '#fbbf24', '#f87171'
 
 export function SourceChart({ range }: { range?: DateRange }) {
   const { data, loading } = useApi(() => api.getSources(range), [range?.from, range?.to]);
-  if (loading || !data) return <div className="h-64 animate-pulse rounded-xl" style={{ background: 'var(--bg-card)' }} />;
+  const { data: usage } = useApi(() => api.getSourceUsage(range), [range?.from, range?.to]);
+  if (loading || !data || !usage) return <div className="h-64 animate-pulse rounded-xl" style={{ background: 'var(--bg-card)' }} />;
 
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) {
@@ -41,6 +42,14 @@ export function SourceChart({ range }: { range?: DateRange }) {
           },
         }}
       />
+      <div className="mt-4 space-y-2">
+        {Object.entries(usage).sort((a, b) => b[1].tokens - a[1].tokens).map(([source, stats]) => (
+          <div key={source} className="flex items-center justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
+            <span>{source} · {stats.sessions} sessions</span>
+            <span className="font-mono">{stats.tokens.toLocaleString()} tokens · ${stats.cost.toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

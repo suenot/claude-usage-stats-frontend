@@ -131,6 +131,7 @@ export const api = {
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
+  getSourceUsage: (range?: DateRange) => fetchJson<Record<string, { cost: number; sessions: number; tokens: number }>>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),
 };
