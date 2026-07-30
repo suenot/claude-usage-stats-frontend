@@ -24,7 +24,8 @@ export default function App() {
   const { data: summary, loading, refetch } = useApi(() => api.getSummary(), []);
   const [refreshing, setRefreshing] = useState(false);
   const [dataRevision, setDataRevision] = useState(0);
-  // Shared date range selected on the daily chart and consumed by pies + hourly.
+  // Shared date range selected on the history chart and consumed by every
+  // downstream usage breakdown.
   const [range, setRange] = useState<DateRange>({});
 
   useEffect(() => {
@@ -145,7 +146,7 @@ export default function App() {
             <div className="space-y-4 md:space-y-6">
                 <DailyChart range={range} onRangeChange={setRange} />
                 <PieSection range={range} setRange={setRange} />
-                <Heatmap />
+                <Heatmap range={range} />
             </div>
           </div>
         )}

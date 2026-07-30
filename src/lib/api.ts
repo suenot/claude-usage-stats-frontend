@@ -187,7 +187,7 @@ export const api = {
     const qs = new URLSearchParams({ timeframe, groupBy, days: String(days) });
     return fetchJson<HistoryChartResponse>(`/charts/history?${qs}`);
   },
-  getHeatmap: () => fetchJson<HeatmapEntry[]>('/charts/heatmap'),
+  getHeatmap: (range?: DateRange) => fetchJson<HeatmapEntry[]>(`/charts/heatmap${rangeQs(range)}`),
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),

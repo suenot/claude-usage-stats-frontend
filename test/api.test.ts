@@ -23,7 +23,7 @@ test('collects data through the backend POST endpoint', async () => {
   }
 });
 
-test('requests source and model usage with the selected range', async () => {
+test('requests range-dependent charts with the selected range', async () => {
   const originalFetch = globalThis.fetch;
   const requests: Array<string | URL | Request> = [];
 
@@ -37,10 +37,16 @@ test('requests source and model usage with the selected range', async () => {
 
     await api.getSourceUsage(range);
     await api.getModelUsage(range);
+    await api.getHourly(range);
+    await api.getCache(range);
+    await api.getHeatmap(range);
 
     assert.deepEqual(requests, [
       '/api/charts/source-usage?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
       '/api/charts/model-usage?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
+      '/api/charts/hourly?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
+      '/api/charts/cache?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
+      '/api/charts/heatmap?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
     ]);
   } finally {
     globalThis.fetch = originalFetch;

@@ -1,5 +1,5 @@
 import { useApi } from '../hooks/useApi';
-import { api, type HeatmapEntry } from '../lib/api';
+import { api, type DateRange, type HeatmapEntry } from '../lib/api';
 
 function getLevel(cost: number, max: number): number {
   if (cost === 0) return 0;
@@ -12,11 +12,12 @@ function getLevel(cost: number, max: number): number {
 
 const LEVEL_COLORS = ['#F4F4F0', '#DEDDD7', '#AAA8A0', '#66645F', '#BC1010'];
 
-export function Heatmap() {
-  const { data, loading } = useApi(() => api.getHeatmap(), []);
+export function Heatmap({ range }: { range?: DateRange }) {
+  const { data, loading } = useApi(() => api.getHeatmap(range), [range?.from, range?.to]);
   if (loading || !data) return <div className="min-h-44 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading peak hours" />;
 
-  const dates = [...new Set(data.map(entry => entry.date))].sort().slice(-14);
+  const allDates = [...new Set(data.map(entry => entry.date))].sort();
+  const dates = range?.from || range?.to ? allDates : allDates.slice(-14);
   const maxCost = Math.max(...data.map(entry => entry.cost), 0.01);
   const cellMap: Record<string, HeatmapEntry> = {};
   for (const entry of data) cellMap[`${entry.date}|${entry.hour}`] = entry;
