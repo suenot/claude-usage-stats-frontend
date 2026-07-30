@@ -6,6 +6,7 @@ import { colorForModel, colorForSource } from '../lib/model-colors';
 import {
   breakdownSlices,
   breakdownTooltipLines,
+  formatCompactProjectMetric,
   formatBreakdownValues,
   formatProjectMetric,
   projectModelColors,
@@ -33,7 +34,7 @@ function BreakdownChart({
 
   if (slices.length === 0) {
     return (
-      <section className="min-w-0 rounded-lg p-4" style={{ background: 'var(--bg-primary)' }}>
+      <section className="min-w-0 rounded-xl p-4" style={{ background: 'var(--bg-primary)' }}>
         <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h4>
         <div className="flex h-48 items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>
           No {title.toLowerCase()} usage for this metric
@@ -47,7 +48,7 @@ function BreakdownChart({
     : slices.map(slice => colorFor(slice.label));
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg p-4" style={{ background: 'var(--bg-primary)' }}>
+    <section className="min-w-0 overflow-hidden rounded-xl p-4" style={{ background: 'var(--bg-primary)' }}>
       <h4 className="mb-3 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h4>
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
         <div className="h-48 min-w-0 flex-1">
@@ -78,7 +79,7 @@ function BreakdownChart({
         </div>
         <ul
           aria-label={`${title} legend`}
-          className="max-h-48 min-w-0 space-y-2 overflow-y-auto text-xs sm:w-48"
+          className="min-w-0 space-y-2 text-xs sm:w-48"
         >
           {slices.map((slice, index) => (
             <li key={slice.label} className="flex min-w-0 items-start gap-2">
@@ -108,9 +109,9 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
   const [metric, setMetric] = useState<ProjectMetric>('usd');
 
   return (
-    <div id={id} role="region" aria-label={`${project.cwd} details`} className="min-w-0 p-4 sm:p-5">
+    <div id={id} role="region" aria-label={`${project.cwd} details`} className="min-w-0 border-t p-4 sm:p-5" style={{ borderColor: 'rgba(148,163,184,0.12)' }}>
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <dl className="flex flex-wrap gap-x-6 gap-y-2">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-6">
           <div>
             <dt className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>USD</dt>
             <dd className="font-mono text-sm font-semibold" style={{ color: 'var(--accent-yellow)' }}>
@@ -119,8 +120,13 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
           </div>
           <div>
             <dt className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Tokens</dt>
-            <dd className="font-mono text-sm font-semibold" style={{ color: 'var(--accent-cyan)' }}>
-              {formatProjectMetric(project.tokens, 'tokens')}
+            <dd className="font-mono tabular-nums" title={formatProjectMetric(project.tokens, 'tokens')}>
+              <span className="block text-sm font-semibold" style={{ color: 'var(--accent-cyan)' }}>
+                {formatCompactProjectMetric(project.tokens, 'tokens')}
+              </span>
+              <span className="mt-0.5 block break-words text-[10px] font-normal leading-4 [overflow-wrap:anywhere]" style={{ color: 'var(--text-secondary)' }}>
+                Exact: {formatProjectMetric(project.tokens, 'tokens')}
+              </span>
             </dd>
           </div>
           <div>
@@ -132,6 +138,7 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
         </dl>
 
         <div
+          role="group"
           aria-label="Project breakdown metric"
           className="flex w-fit rounded-lg p-0.5"
           style={{ background: 'var(--bg-secondary)' }}
@@ -144,7 +151,7 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setMetric(option)}
-                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                className="min-h-11 rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 active:scale-[0.98]"
                 style={{
                   background: selected ? 'var(--accent-blue)' : 'transparent',
                   color: selected ? '#fff' : 'var(--text-secondary)',

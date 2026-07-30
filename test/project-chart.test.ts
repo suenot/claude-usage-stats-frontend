@@ -5,11 +5,15 @@ import type { ProjectEntry } from '../src/lib/api.ts';
 import {
   breakdownSlices,
   breakdownTooltipLines,
+  formatCompactProjectMetric,
   formatBreakdownValues,
   formatProjectMetric,
+  matchesProjectSearch,
   projectModelColors,
   projectLabel,
   projectSlices,
+  projectTotals,
+  sortProjects,
 } from '../src/lib/project-chart.ts';
 
 const projects: ProjectEntry[] = [
@@ -74,9 +78,84 @@ test('creates concise project labels while preserving the no-project marker', ()
   assert.equal(projectLabel(''), '(no project)');
 });
 
+test('aggregates totals for the projects overview without changing the input', () => {
+  const source = structuredClone(projects);
+
+  assert.deepEqual(projectTotals(projects), {
+    projects: 4,
+    cost: 17.95,
+    tokens: 1445,
+    sessions: 7,
+  });
+  assert.deepEqual(projects, source);
+});
+
+test('searches project path, short name, models, sources, and breakdown labels', () => {
+  const searchable: ProjectEntry = {
+    cwd: '/Users/alex/work/usage-dashboard',
+    cost: 12,
+    tokens: 1200,
+    sessions: 3,
+    sources: ['Claude Code'],
+    models: ['claude-sonnet-4-5'],
+    byModel: { 'gpt-5.6-terra': { usd: 3, tokens: 300, sessions: 1 } },
+    byHarness: { Codex: { usd: 3, tokens: 300, sessions: 1 } },
+  };
+
+  assert.equal(matchesProjectSearch(searchable, ''), true);
+  assert.equal(matchesProjectSearch(searchable, '  DASHBOARD  '), true);
+  assert.equal(matchesProjectSearch(searchable, 'dashboard'), true);
+  assert.equal(matchesProjectSearch(searchable, 'claude code'), true);
+  assert.equal(matchesProjectSearch(searchable, 'gpt-5.6'), true);
+  assert.equal(matchesProjectSearch(searchable, 'codex'), true);
+  assert.equal(matchesProjectSearch(searchable, 'unrelated'), false);
+});
+
+test('sorts project browser results by cost, tokens, or concise name without mutation', () => {
+  const source = structuredClone(projects);
+
+  assert.deepEqual(sortProjects(projects, 'cost').map(project => projectLabel(project.cwd)), [
+    'bravo', 'alpha', '(no project)', 'charlie',
+  ]);
+  assert.deepEqual(sortProjects(projects, 'tokens').map(project => projectLabel(project.cwd)), [
+    'charlie', 'alpha', 'bravo', '(no project)',
+  ]);
+  assert.deepEqual(sortProjects(projects, 'name').map(project => projectLabel(project.cwd)), [
+    '(no project)', 'alpha', 'bravo', 'charlie',
+  ]);
+  assert.deepEqual(sortProjects(projects, 'sessions').map(project => projectLabel(project.cwd)), [
+    'charlie', 'alpha', '(no project)', 'bravo',
+  ]);
+  assert.deepEqual(projects, source);
+});
+
+test('uses the full project path as a deterministic tie-breaker', () => {
+  const tied: ProjectEntry[] = [
+    { cwd: '/work/zebra/app', cost: 4, tokens: 400, sessions: 2, sources: [], models: [], byModel: {}, byHarness: {} },
+    { cwd: '/work/alpha/app', cost: 4, tokens: 400, sessions: 2, sources: [], models: [], byModel: {}, byHarness: {} },
+  ];
+
+  assert.deepEqual(sortProjects(tied, 'cost').map(project => project.cwd), [
+    '/work/alpha/app', '/work/zebra/app',
+  ]);
+  assert.deepEqual(sortProjects(tied, 'tokens').map(project => project.cwd), [
+    '/work/alpha/app', '/work/zebra/app',
+  ]);
+  assert.deepEqual(sortProjects(tied, 'sessions').map(project => project.cwd), [
+    '/work/alpha/app', '/work/zebra/app',
+  ]);
+});
+
 test('formats USD and token values for chart tooltips', () => {
   assert.equal(formatProjectMetric(12.345, 'usd'), '$12.35');
   assert.equal(formatProjectMetric(1234567.8, 'tokens'), '1,234,568 tokens');
+});
+
+test('formats large token totals compactly while exact format remains available', () => {
+  assert.equal(formatCompactProjectMetric(5_918_290_508, 'tokens'), '5.92B tokens');
+  assert.equal(formatCompactProjectMetric(20_678_890_819, 'tokens'), '20.7B tokens');
+  assert.equal(formatCompactProjectMetric(42_000_000, 'tokens'), '42M tokens');
+  assert.equal(formatCompactProjectMetric(12.345, 'usd'), '$12.35');
 });
 
 const breakdown = {

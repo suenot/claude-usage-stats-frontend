@@ -3,6 +3,7 @@ import { Doughnut } from 'react-chartjs-2';
 import { ArcElement, Chart as ChartJS, Tooltip } from 'chart.js';
 import type { ProjectEntry } from '../lib/api';
 import {
+  formatCompactProjectMetric,
   formatProjectMetric,
   projectSlices,
   type ProjectMetric,
@@ -23,11 +24,23 @@ interface ProjectChartProps {
 export function ProjectChart({ data, loading }: ProjectChartProps) {
   const [metric, setMetric] = useState<ProjectMetric>('usd');
 
-  if (loading || !data) {
+  if (loading) {
     return (
-      <section className="rounded-xl p-5 animate-pulse" style={{ background: 'var(--bg-card)' }}>
+      <section aria-label="Loading project distribution" className="rounded-2xl p-4 animate-pulse sm:p-5" style={{ background: 'var(--bg-card)' }}>
         <div className="h-5 w-28 rounded" style={{ background: 'var(--bg-secondary)' }} />
-        <div className="mt-5 h-56 rounded" style={{ background: 'var(--bg-secondary)' }} />
+        <div className="mt-4 h-48 rounded-xl" style={{ background: 'var(--bg-secondary)' }} />
+      </section>
+    );
+  }
+
+  if (!data) {
+    return (
+      <section aria-labelledby="project-distribution-heading" className="rounded-2xl p-4 sm:p-5" style={{ background: 'var(--bg-card)' }}>
+        <p className="text-xs font-medium tracking-wide" style={{ color: 'var(--text-secondary)' }}>All projects</p>
+        <h3 id="project-distribution-heading" className="mt-0.5 text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Project mix</h3>
+        <div className="mt-4 flex h-48 items-center justify-center rounded-xl text-sm" style={{ background: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
+          Project distribution is unavailable
+        </div>
       </section>
     );
   }
@@ -35,10 +48,14 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
   const slices = projectSlices(data, metric);
 
   return (
-    <section className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
+    <section aria-labelledby="project-distribution-heading" className="rounded-2xl p-4 sm:p-5" style={{ background: 'var(--bg-card)' }}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>By Project</h3>
+        <div>
+          <p className="text-xs font-medium tracking-wide" style={{ color: 'var(--text-secondary)' }}>All projects</p>
+          <h3 id="project-distribution-heading" className="mt-0.5 text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Project mix</h3>
+        </div>
         <div
+          role="group"
           aria-label="Project chart metric"
           className="flex rounded-lg p-0.5"
           style={{ background: 'var(--bg-secondary)' }}
@@ -51,7 +68,7 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setMetric(option)}
-                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                className="min-h-11 rounded-md px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400 active:scale-[0.98]"
                 style={{
                   background: selected ? 'var(--accent-blue)' : 'transparent',
                   color: selected ? '#fff' : 'var(--text-secondary)',
@@ -65,12 +82,12 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
       </div>
 
       {slices.length === 0 ? (
-        <div className="h-56 flex items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex h-48 items-center justify-center rounded-xl text-sm" style={{ background: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
           No project usage yet
         </div>
       ) : (
-        <div className="flex flex-col gap-5 md:flex-row md:items-center">
-          <div className="h-56 min-w-0 flex-1">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="h-48 min-w-0 flex-1 sm:h-52">
             <Doughnut
               data={{
                 labels: slices.map(slice => slice.label),
@@ -96,13 +113,17 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
               }}
             />
           </div>
-          <ul className="grid max-h-40 min-w-0 gap-2 overflow-y-auto text-xs md:w-52 md:max-h-56 md:block md:space-y-2" aria-label="Project chart legend">
+          <ul className="grid min-w-0 gap-2 text-xs sm:w-48 sm:block sm:space-y-2" aria-label="Project chart legend">
             {slices.map((slice, index) => (
               <li key={`${slice.fullLabel}-${index}`} className="flex min-w-0 items-center gap-2" title={slice.fullLabel}>
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COLORS[index] }} />
                 <span className="truncate" style={{ color: 'var(--text-secondary)' }}>{slice.label}</span>
-                <span className="ml-auto font-mono" style={{ color: 'var(--text-primary)' }}>
-                  {formatProjectMetric(slice.value, metric)}
+                <span
+                  aria-label={formatProjectMetric(slice.value, metric)}
+                  className="ml-auto shrink-0 font-mono"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {formatCompactProjectMetric(slice.value, metric)}
                 </span>
               </li>
             ))}

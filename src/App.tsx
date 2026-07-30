@@ -16,6 +16,7 @@ export default function App() {
   ));
   const { data: summary, loading, refetch } = useApi(() => api.getSummary(), []);
   const [refreshing, setRefreshing] = useState(false);
+  const [dataRevision, setDataRevision] = useState(0);
   // Shared date range — selected on the daily chart, consumed by pies + hourly.
   const [range, setRange] = useState<DateRange>({});
 
@@ -39,6 +40,7 @@ export default function App() {
     try {
       await api.collectData();
       refetch();
+      setDataRevision(revision => revision + 1);
     } finally {
       setRefreshing(false);
     }
@@ -98,10 +100,11 @@ export default function App() {
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {tab === 'models' ? (
-          <ModelPricingTable />
-        ) : loading || !summary ? (
+      <main className={tab === 'projects'
+        ? 'mx-auto w-full min-w-0 max-w-7xl space-y-5 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6'
+        : 'mx-auto w-full min-w-0 max-w-7xl space-y-6 px-6 py-6'
+      }>
+        {tab === 'models' ? <ModelPricingTable /> : tab === 'projects' ? <ProjectsTable refreshKey={dataRevision} /> : loading || !summary ? (
           <div className="text-center py-20" style={{ color: 'var(--text-secondary)' }}>Loading data...</div>
         ) : (
           <>
@@ -117,7 +120,6 @@ export default function App() {
 
             {tab === 'sessions' && <SessionTable />}
 
-            {tab === 'projects' && <ProjectsTable />}
           </>
         )}
       </main>
