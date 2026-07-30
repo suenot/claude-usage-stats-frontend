@@ -22,3 +22,27 @@ test('collects data through the backend POST endpoint', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('requests source and model usage with the selected range', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<string | URL | Request> = [];
+
+  globalThis.fetch = async input => {
+    requests.push(input);
+    return Response.json({});
+  };
+
+  try {
+    const range = { from: '2026-07-01T10:00', to: '2026-07-31T23:59' };
+
+    await api.getSourceUsage(range);
+    await api.getModelUsage(range);
+
+    assert.deepEqual(requests, [
+      '/api/charts/source-usage?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
+      '/api/charts/model-usage?from=2026-07-01T10%3A00&to=2026-07-31T23%3A59',
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

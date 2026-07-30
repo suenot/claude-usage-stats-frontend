@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useApi } from '../hooks/useApi';
 import { api, type DateRange } from '../lib/api';
-import { colorForModel, modelFamilyFor, shade } from '../lib/model-colors';
+import { projectModelColors } from '../lib/project-chart';
+import { formatUsageMetric, formatUsageSummary, usageSlices, type UsageMetric } from '../lib/usage-chart';
+import { UsageMetricToggle } from './UsageMetricToggle';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -23,48 +26,39 @@ const chartTooltip = {
 };
 
 export function ModelChart({ range }: { range?: DateRange }) {
-  const { data, loading } = useApi(() => api.getModels(range), [range?.from, range?.to]);
+  const [metric, setMetric] = useState<UsageMetric>('usd');
+  const { data, loading } = useApi(() => api.getModelUsage(range), [range?.from, range?.to]);
   if (loading || !data) {
     return <div className="min-h-96 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading model split" />;
   }
 
-  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) {
+  const slices = usageSlices(data, metric);
+  if (slices.length === 0) {
     return (
       <section className="min-h-96 border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
-        <header className="border-b border-[#111111] pb-3">
+        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#111111] pb-3">
           <h3 className="text-2xl font-black uppercase tracking-[-0.06em] text-[#111111]">By model</h3>
+          <UsageMetricToggle label="Model chart metric" metric={metric} onChange={setMetric} />
         </header>
-        <div className="flex h-64 items-center justify-center font-mono text-xs uppercase tracking-[0.1em] text-[#66645F]">No data in range</div>
+        <div className="flex h-64 items-center justify-center font-mono text-xs uppercase tracking-[0.1em] text-[#66645F]">No usage for this metric</div>
       </section>
     );
   }
 
-  const familyCounts: Record<string, number> = {};
-  for (const [model] of entries) {
-    const family = modelFamilyFor(model);
-    familyCounts[family] = (familyCounts[family] || 0) + 1;
-  }
-  const familySeen: Record<string, number> = {};
-  const colors = entries.map(([model]) => {
-    const family = modelFamilyFor(model);
-    const base = colorForModel(model);
-    const total = familyCounts[family];
-    const index = familySeen[family] = (familySeen[family] || 0) + 1;
-    return total <= 1 ? base : shade(base, ((index - 1) / (total - 1) - 0.5) * 0.5);
-  });
+  const colors = projectModelColors(slices.map(slice => slice.label), Object.keys(data));
 
   return (
     <section className="border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
-      <header className="border-b-2 border-[#111111] pb-3">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b-2 border-[#111111] pb-3">
         <h3 className="text-2xl font-black uppercase tracking-[-0.06em] text-[#111111]">By model</h3>
+        <UsageMetricToggle label="Model chart metric" metric={metric} onChange={setMetric} />
       </header>
       <div className="h-60 pt-4 sm:h-64">
         <Doughnut
           data={{
-            labels: entries.map(([key]) => cleanLabel(key)),
+            labels: slices.map(slice => cleanLabel(slice.label)),
             datasets: [{
-              data: entries.map(([, value]) => parseFloat(value.toFixed(2))),
+              data: slices.map(slice => slice.value),
               backgroundColor: colors,
               borderColor: '#F4F4F0',
               borderWidth: 2,
@@ -74,20 +68,29 @@ export function ModelChart({ range }: { range?: DateRange }) {
           options={{
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
             cutout: '67%',
             plugins: {
               legend: { display: false },
-              tooltip: { ...chartTooltip, callbacks: { label: context => `${context.label}: $${context.parsed.toFixed(2)}` } },
+              tooltip: {
+                ...chartTooltip,
+                callbacks: {
+                  label: context => `${context.label}: ${formatUsageMetric(context.parsed, metric)}`,
+                  footer: items => formatUsageSummary(slices[items[0].dataIndex].stats, metric),
+                },
+              },
             },
           }}
         />
       </div>
       <dl className="border-t border-[#111111]">
-        {entries.map(([model, cost], index) => (
-          <div key={model} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-b border-[#DEDDD7] py-3 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-baseline">
+        {slices.map((slice, index) => (
+          <div key={slice.label} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-b border-[#DEDDD7] py-3 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-baseline">
             <span className="mt-1 h-2.5 w-2.5 border border-[#111111]" style={{ background: colors[index] }} aria-hidden="true" />
-            <dt className="min-w-0 break-words font-mono text-[11px] leading-4 text-[#111111]">{cleanLabel(model)}</dt>
-            <dd className="col-start-2 mt-1 font-mono text-[11px] tabular-nums text-[#66645F] sm:col-start-auto sm:mt-0">${cost.toFixed(2)}</dd>
+            <dt className="min-w-0 break-words font-mono text-[11px] leading-4 text-[#111111]">{cleanLabel(slice.label)}</dt>
+            <dd className="col-start-2 mt-1 font-mono text-[11px] tabular-nums text-[#66645F] sm:col-start-auto sm:mt-0">
+              {formatUsageSummary(slice.stats, metric)}
+            </dd>
           </div>
         ))}
       </dl>

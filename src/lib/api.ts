@@ -157,6 +157,14 @@ export interface DateRange {
   to?: string;
 }
 
+export interface UsageBreakdownEntry {
+  cost: number;
+  sessions: number;
+  tokens: number;
+}
+
+export type UsageBreakdown = Record<string, UsageBreakdownEntry>;
+
 function rangeQs(range?: DateRange): string {
   if (!range) return '';
   const p = new URLSearchParams();
@@ -183,8 +191,9 @@ export const api = {
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
-  getSourceUsage: (range?: DateRange) => fetchJson<Record<string, { cost: number; sessions: number; tokens: number }>>(`/charts/source-usage${rangeQs(range)}`),
+  getSourceUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
+  getModelUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/model-usage${rangeQs(range)}`),
   getModelPricing: (force = false) => fetchJson<ModelPricingResponse>(`/models/pricing${force ? '?refresh=1' : ''}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect', { method: 'POST' }),
 };
