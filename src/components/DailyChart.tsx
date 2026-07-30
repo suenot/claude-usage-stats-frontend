@@ -66,8 +66,7 @@ function Segmented<T extends string,>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="flex rounded-md p-0.5"
-      style={{ background: 'var(--bg-secondary)' }}
+      className="grid min-h-11 grid-flow-col auto-cols-fr gap-px border border-[#111111] bg-[#111111]"
     >
       {options.map(option => (
         <button
@@ -75,10 +74,10 @@ function Segmented<T extends string,>({
           type="button"
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className="px-2.5 py-1 text-xs rounded transition-colors"
+          className="min-w-0 px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
           style={{
-            background: value === option.value ? 'var(--accent-blue)' : 'transparent',
-            color: value === option.value ? '#fff' : 'var(--text-secondary)',
+            background: value === option.value ? '#111111' : '#F4F4F0',
+            color: value === option.value ? '#F4F4F0' : '#111111',
           }}
         >
           {option.label}
@@ -295,7 +294,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
         const color = groupBy === 'model' ? colorForModel(name) : colorForSource(name);
         return hasRange && !inRange(bucket.timestamp) ? fade(color, 0.16) : color;
       }),
-      borderRadius: 2,
+      borderRadius: 0,
       maxBarThickness: 34,
       yAxisID: 'value',
     })),
@@ -310,44 +309,42 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   };
 
   return (
-    <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
-      <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
+    <section className="border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
+      <div className="grid gap-4 border-b-2 border-[#111111] pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>History chart</h3>
-          <div className="flex items-baseline gap-3 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-mono text-base" style={{ color: 'var(--accent-cyan)' }}>
+          <h3 className="text-3xl font-black uppercase tracking-[-0.07em] text-[#111111] sm:text-4xl">Activity ledger</h3>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-[#66645F]">
+            <span className="font-mono text-lg font-bold text-[#111111]">
               {formatTotal(selectedTotal, metric)}
             </span>
-            <span>за {activeCount} {periodLabel}</span>
+            <span>{activeCount} {periodLabel}</span>
             {activeCount > 0 && (
-              <span>· {formatTotal(selectedTotal / activeCount, metric)} / {averageLabel}</span>
+              <span>{formatTotal(selectedTotal / activeCount, metric)} / {averageLabel}</span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap justify-end">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           {hasRange && (
             <span
-              className="text-xs font-mono px-2 py-1 rounded-md"
-              style={{ background: 'rgba(34,211,238,0.1)', color: 'var(--accent-cyan)' }}
+              className="min-h-11 border border-[#111111] bg-[#DEDDD7] px-3 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#111111]"
             >
-              {rangeLabel(from)} → {rangeLabel(to)}
+              {rangeLabel(from)} &gt; {rangeLabel(to)}
             </span>
           )}
           {hasRange && (
             <button
               type="button"
               onClick={() => onRangeChange?.({})}
-              className="px-2.5 py-1 text-xs rounded-md transition-colors"
-              style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+              className="min-h-11 border border-[#111111] bg-[#F4F4F0] px-3 text-xs font-bold uppercase tracking-[0.08em] text-[#111111] transition-colors hover:bg-[#BC1010] hover:text-[#F4F4F0] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
             >
-              Сбросить
+              Reset
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <Segmented options={METRIC_OPTIONS} value={metric} onChange={setMetric} ariaLabel="Metric" />
         <Segmented
           options={GROUP_OPTIONS}
@@ -379,20 +376,18 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                 else next.add(name);
                 return next;
               })}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-opacity"
+              className="flex min-h-11 items-center gap-1.5 border border-[#111111] bg-[#F4F4F0] px-2 text-xs transition-opacity focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
               style={{
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-secondary)',
                 opacity: off ? 0.4 : 1,
               }}
               title={off ? 'Показать' : 'Скрыть'}
             >
               <span
-                className="inline-block w-2.5 h-2.5 rounded-sm"
-                style={{ background: off ? '#64748b' : color }}
+                className="inline-block h-2.5 w-2.5 border border-[#111111]"
+                style={{ background: off ? '#DEDDD7' : color }}
               />
-              <span style={{ textDecoration: off ? 'line-through' : 'none' }}>{name}</span>
-              <span className="font-mono" style={{ color: 'var(--text-primary)' }}>
+              <span className="max-w-28 truncate font-bold uppercase tracking-[0.06em] text-[#111111]" style={{ textDecoration: off ? 'line-through' : 'none' }}>{name}</span>
+              <span className="font-mono text-[#66645F]">
                 {metric === 'usd'
                   ? money(selectedBySeries[name] || 0)
                   : `${((selectedBySeries[name] || 0) / 1_000_000).toFixed(1)}M`}
@@ -402,17 +397,17 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
         })}
       </div>
 
-      {loading && <div className="h-80 animate-pulse rounded-lg" style={{ background: 'rgba(148,163,184,0.08)' }} />}
+      {loading && <div className="mt-4 h-80 border border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading activity history" />}
       {empty && (
-        <div className="h-80 flex items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Нет данных
+        <div className="mt-4 flex h-80 items-center justify-center border border-[#111111] font-mono text-xs uppercase tracking-[0.1em] text-[#66645F]">
+          No data
         </div>
       )}
 
       {!loading && !empty && (
         <div
           ref={wrapRef}
-          className="relative select-none"
+          className="relative mt-4 select-none border border-[#111111] bg-[#F4F4F0]"
           style={{ height: 320, cursor: 'crosshair', touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -431,13 +426,13 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                 legend: { display: false },
                 tooltip: {
                   enabled: !drag,
-                  backgroundColor: 'rgba(15,23,42,0.95)',
-                  borderColor: 'rgba(148,163,184,0.2)',
+                  backgroundColor: '#F4F4F0',
+                  borderColor: '#111111',
                   borderWidth: 1,
                   padding: 10,
-                  titleColor: '#f8fafc',
-                  bodyColor: '#e2e8f0',
-                  footerColor: '#f8fafc',
+                  titleColor: '#111111',
+                  bodyColor: '#111111',
+                  footerColor: '#66645F',
                   itemSort: (a, b) => (b.parsed.y as number) - (a.parsed.y as number),
                   callbacks: {
                     title: (items: TooltipItem<'bar'>[]) => (
@@ -462,25 +457,26 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                 x: {
                   stacked: true,
                   ticks: {
-                    color: '#94a3b8',
-                    font: { size: 10 },
+                    color: '#66645F',
+                    font: { size: 10, family: 'JetBrains Mono' },
                     maxRotation: 0,
                     autoSkip: true,
                     autoSkipPadding: 12,
                   },
                   grid: { display: false },
+                  border: { color: '#111111' },
                 },
                 value: {
                   position: 'left',
                   stacked: true,
                   beginAtZero: true,
                   ticks: {
-                    color: '#94a3b8',
-                    font: { size: 10 },
+                    color: '#66645F',
+                    font: { size: 10, family: 'JetBrains Mono' },
                     callback: value => metric === 'usd' ? money(Number(value)) : `${value}M`,
                   },
-                  grid: { color: 'rgba(148,163,184,0.08)' },
-                  border: { display: false },
+                  grid: { color: '#D3D2CC' },
+                  border: { color: '#111111' },
                 },
               },
             }}
@@ -489,35 +485,32 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
           {drag && (
             <>
               <div
-                className="absolute top-0 bottom-0 pointer-events-none rounded-sm"
+                className="absolute top-0 bottom-0 pointer-events-none"
                 style={{
                   left: drag.left,
                   width: Math.max(drag.right - drag.left, 2),
-                  background: 'rgba(34,211,238,0.14)',
-                  borderLeft: '1px solid var(--accent-cyan)',
-                  borderRight: '1px solid var(--accent-cyan)',
+                  background: 'rgba(230,25,25,0.12)',
+                  borderLeft: '2px solid #BC1010',
+                  borderRight: '2px solid #BC1010',
                 }}
               />
               <div
-                className="absolute top-1 px-2 py-1 rounded-md text-xs font-mono pointer-events-none whitespace-nowrap"
+                className="absolute top-1 px-2 py-1 border border-[#111111] bg-[#F4F4F0] text-xs font-mono pointer-events-none whitespace-nowrap"
                 style={{
                   left: Math.max(0, (drag.left + drag.right) / 2 - 55),
-                  background: 'rgba(15,23,42,0.95)',
-                  border: '1px solid rgba(34,211,238,0.4)',
-                  color: 'var(--accent-cyan)',
+                  color: '#111111',
                 }}
               >
-                {drag.count} {timeframe === '1d' ? 'дн.' : 'ч.'} · {formatTotal(drag.total, metric)}
+                {drag.count} {timeframe === '1d' ? 'days' : 'hours'} - {formatTotal(drag.total, metric)}
               </div>
             </>
           )}
         </div>
       )}
 
-      <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-        Протащи мышью по графику, чтобы выбрать диапазон — пироги и график по часам подхватят его. Клик сбрасывает.
-        {timeframe === '1d' ? ' Дни' : ' Часы'} без трат пропущены, длинные паузы свернуты.
+      <p className="mt-4 border-t border-[#DEDDD7] pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#66645F]">
+        Drag to set a range. Click to reset. Empty {timeframe === '1d' ? 'days' : 'hours'} are compacted.
       </p>
-    </div>
+    </section>
   );
 }

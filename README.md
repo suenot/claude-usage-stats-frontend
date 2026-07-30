@@ -1,1 +1,1 @@
-# @claude-stats/frontend
+# Harness Analyzer frontend

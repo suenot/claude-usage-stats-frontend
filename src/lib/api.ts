@@ -1,7 +1,7 @@
 const BASE = '/api';
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, init);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
@@ -186,5 +186,5 @@ export const api = {
   getSourceUsage: (range?: DateRange) => fetchJson<Record<string, { cost: number; sessions: number; tokens: number }>>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   getModelPricing: (force = false) => fetchJson<ModelPricingResponse>(`/models/pricing${force ? '?refresh=1' : ''}`),
-  collectData: () => fetchJson<{ message: string; sessions: number }>('/collect'),
+  collectData: () => fetchJson<{ message: string; sessions: number }>('/collect', { method: 'POST' }),
 };

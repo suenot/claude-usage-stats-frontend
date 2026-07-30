@@ -2,104 +2,92 @@ import { useApi } from '../hooks/useApi';
 import { api, type DateRange } from '../lib/api';
 import { colorForModel } from '../lib/model-colors';
 
-const dollars = (v: number) => `$${Math.round(v).toLocaleString('ru-RU')}`;
-function fmtTokens(n: number): string {
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-  return String(n);
+const dollars = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
+function fmtTokens(value: number): string {
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+  return String(value);
 }
 
 export function CacheChart({ range }: { range?: DateRange }) {
   const { data, loading } = useApi(() => api.getCache(range), [range?.from, range?.to]);
-
-  if (loading || !data) {
-    return <div className="h-64 animate-pulse rounded-xl" style={{ background: 'var(--bg-card)' }} />;
-  }
+  if (loading || !data) return <div className="min-h-80 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading cache impact" />;
 
   if (data.no_cache_cost <= 0) {
     return (
-      <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
-        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Экономия на кэше</h3>
-        <div className="h-32 flex items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Нет данных за выбранный период
-        </div>
-      </div>
+      <section className="min-h-80 border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
+        <header className="border-b-2 border-[#111111] pb-3">
+          <h3 className="text-2xl font-black uppercase tracking-[-0.06em] text-[#111111]">Cache impact</h3>
+        </header>
+        <div className="flex h-44 items-center justify-center font-mono text-xs uppercase tracking-[0.1em] text-[#66645F]">No data in range</div>
+      </section>
     );
   }
 
-  // Both bars share one scale — the no-cache bar is the full width, so the
-  // actual bar's stub reads as the fraction actually paid.
   const actualWidth = Math.max((data.actual_cost / data.no_cache_cost) * 100, 0.6);
-  const maxSaved = Math.max(...data.by_model.map(m => m.saved), 1);
+  const maxSaved = Math.max(...data.by_model.map(model => model.saved), 1);
 
   return (
-    <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+    <section className="border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
+      <div className="grid gap-4 border-b-2 border-[#111111] pb-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Экономия на кэше</h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Сколько стоил бы тот же трафик, если бы каждый токен из кэша считался свежим input
-          </p>
+          <h3 className="text-2xl font-black uppercase tracking-[-0.06em] text-[#111111]">Cache impact</h3>
+          <p className="mt-2 text-xs leading-5 text-[#66645F]">Cost if cached tokens were billed as new input.</p>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-2xl font-semibold" style={{ color: 'var(--accent-green)' }}>
-            {dollars(data.saved)}
+        <div className="border-l-4 border-[#BC1010] pl-3 sm:text-right">
+          <data value={String(data.saved)} className="block font-mono text-2xl font-bold tabular-nums text-[#111111]">{dollars(data.saved)}</data>
+          <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-[#66645F]">Saved -{data.saved_pct.toFixed(1)}%</div>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        <div>
+          <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+            <span className="font-bold uppercase tracking-[0.08em] text-[#66645F]">Without cache</span>
+            <span className="font-mono tabular-nums text-[#111111]">{dollars(data.no_cache_cost)}</span>
           </div>
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            минус {data.saved_pct.toFixed(1)}% от полной цены
+          <div className="h-4 border border-[#111111] bg-[#111111]" />
+        </div>
+        <div>
+          <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+            <span className="font-bold uppercase tracking-[0.08em] text-[#111111]">Actual cost</span>
+            <span className="font-mono tabular-nums text-[#111111]">{dollars(data.actual_cost)}</span>
+          </div>
+          <div className="h-4 border border-[#111111] bg-[#DEDDD7]">
+            <div className="h-full bg-[#BC1010]" style={{ width: `${actualWidth}%` }} />
           </div>
         </div>
       </div>
 
-      <div className="space-y-2 mb-5">
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span style={{ color: 'var(--text-secondary)' }}>Без кэша</span>
-            <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{dollars(data.no_cache_cost)}</span>
-          </div>
-          <div className="h-3 rounded-full" style={{ background: 'rgba(248,113,113,0.35)' }} />
-        </div>
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span style={{ color: 'var(--text-primary)' }}>Фактически заплачено</span>
-            <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{dollars(data.actual_cost)}</span>
-          </div>
-          <div className="h-3 rounded-full" style={{ background: 'rgba(148,163,184,0.12)' }}>
-            <div className="h-3 rounded-full" style={{ width: `${actualWidth}%`, background: 'var(--accent-green)' }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <dl className="mt-5 grid grid-cols-1 gap-px border border-[#111111] bg-[#111111] sm:grid-cols-3">
         {[
-          { label: 'Промпта из кэша', value: `${data.hit_rate.toFixed(1)}%` },
+          { label: 'Cache hit rate', value: `${data.hit_rate.toFixed(1)}%` },
           { label: 'Cache read', value: fmtTokens(data.cache_read) },
-          { label: 'Input / Output', value: `${fmtTokens(data.input_tokens)} / ${fmtTokens(data.output_tokens)}` },
-        ].map(s => (
-          <div key={s.label} className="rounded-lg px-3 py-2" style={{ background: 'var(--bg-secondary)' }}>
-            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{s.label}</div>
-            <div className="font-mono text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>{s.value}</div>
+          { label: 'Input / output', value: `${fmtTokens(data.input_tokens)} / ${fmtTokens(data.output_tokens)}` },
+        ].map(stat => (
+          <div key={stat.label} className="bg-[#F4F4F0] px-3 py-3">
+            <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[#66645F]">{stat.label}</dt>
+            <dd className="mt-2 overflow-hidden font-mono text-sm font-bold tabular-nums text-[#111111]">{stat.value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="space-y-1.5">
-        {data.by_model.map(m => (
-          <div key={m.model} className="flex items-center gap-3 text-xs">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: colorForModel(m.model) }} />
-            <span className="w-16 shrink-0" style={{ color: 'var(--text-secondary)' }}>{m.model}</span>
-            <div className="flex-1 h-2 rounded-full" style={{ background: 'rgba(148,163,184,0.1)' }}>
-              <div
-                className="h-2 rounded-full"
-                style={{ width: `${Math.max((m.saved / maxSaved) * 100, 0.5)}%`, background: colorForModel(m.model) }}
-              />
+      <div className="mt-5 border-t border-[#111111]">
+        {data.by_model.map(model => (
+          <div key={model.model} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-[#DEDDD7] py-3 sm:grid-cols-[minmax(110px,0.7fr)_minmax(0,1fr)_auto_auto] sm:items-center">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 border border-[#111111]" style={{ background: colorForModel(model.model) }} />
+              <span className="truncate font-mono text-[11px] text-[#111111]" title={model.model}>{model.model}</span>
             </div>
-            <span className="font-mono w-20 text-right shrink-0" style={{ color: 'var(--text-primary)' }}>{dollars(m.saved)}</span>
-            <span className="font-mono w-12 text-right shrink-0" style={{ color: 'var(--text-secondary)' }}>{m.hit_rate.toFixed(0)}%</span>
+            <div className="order-3 col-span-2 mt-2 h-2 border border-[#111111] bg-[#DEDDD7] sm:order-none sm:col-span-1 sm:mt-0">
+              <div className="h-full" style={{ width: `${Math.max((model.saved / maxSaved) * 100, 0.5)}%`, background: colorForModel(model.model) }} />
+            </div>
+            <span className="font-mono text-[11px] tabular-nums text-[#111111]">{dollars(model.saved)}</span>
+            <span className="font-mono text-[11px] tabular-nums text-[#66645F]">{model.hit_rate.toFixed(0)}%</span>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

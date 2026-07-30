@@ -1,30 +1,142 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-cyan: #22d3ee;
-  --accent-blue: #60a5fa;
-  --accent-purple: #a78bfa;
-  --accent-green: #34d399;
-  --accent-yellow: #fbbf24;
-  --accent-red: #f87171;
-  --accent-orange: #fb923c;
+  color-scheme: light;
+  --paper: #f4f4f0;
+  --paper-deep: #deddd7;
+  --paper-soft: #ebeae5;
+  --ink: #111111;
+  --ink-soft: #3f3e3a;
+  --muted: #66645f;
+  --line-strong: #1b1b1b;
+  --line-soft: #b8b7b1;
+  --signal: #bc1010;
+
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--paper);
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100dvh;
+  text-rendering: geometricPrecision;
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
+button,
+input,
+select {
+  border-radius: 0;
+  font: inherit;
+}
 
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--paper);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.app-nav {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 40;
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.app-nav-link {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  border-right: 1px solid var(--line-strong);
+  padding: 0.75rem 0.25rem;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.app-nav-link:last-child {
+  border-right: 0;
+}
+
+.app-nav-link[aria-current="page"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.app-nav-link:active {
+  transform: translateY(1px);
+}
+
+@media (min-width: 1024px) {
+  .app-nav {
+    position: static;
+    height: auto;
+    border-top: 0;
+    background: transparent;
+  }
+
+  .app-nav-link {
+    min-width: 7.25rem;
+    border-left: 1px solid var(--line-strong);
+    border-right: 0;
+    padding: 0 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

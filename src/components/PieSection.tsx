@@ -5,7 +5,7 @@ import { ModelChart } from './ModelChart';
 import { HourlyChart } from './HourlyChart';
 import { CacheChart } from './CacheChart';
 
-// Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" — matches <input type="datetime-local">.
+// Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" - matches <input type="datetime-local">.
 // We format in local time (not toISOString, which is UTC).
 function fmtDT(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -39,7 +39,7 @@ const PRESETS: { key: PresetKey; label: string; range: () => DateRange }[] = [
 export function PieSection({ range, setRange }: { range: DateRange; setRange: (r: DateRange) => void }) {
   // `range` is owned by App so the daily chart and the presets stay in sync.
   // We remember which preset produced which bounds; once the range moves on
-  // (chart drag, manual input), nothing is highlighted — otherwise a stale
+  // (chart drag, manual input), nothing is highlighted - otherwise a stale
   // "Все время" chip would claim a window it no longer describes.
   const [applied, setApplied] = useState<{ key: PresetKey } & DateRange>({ key: 'all' });
   const active: PresetKey = applied.from === range.from && applied.to === range.to ? applied.key : 'custom';
@@ -54,53 +54,58 @@ export function PieSection({ range, setRange }: { range: DateRange; setRange: (r
   };
 
   const inputStyle = {
-    background: 'var(--bg-secondary)',
-    color: 'var(--text-primary)',
-    border: '1px solid rgba(148,163,184,0.2)',
-    colorScheme: 'dark' as const,
+    background: '#F4F4F0',
+    color: '#111111',
+    border: '1px solid #111111',
+    colorScheme: 'light' as const,
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl p-4 flex flex-wrap items-center gap-3" style={{ background: 'var(--bg-card)' }}>
-        <span className="text-sm font-medium mr-1" style={{ color: 'var(--text-secondary)' }}>Диапазон:</span>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-5">
+      <section aria-label="Date range" className="border-2 border-[#111111] bg-[#F4F4F0] p-3 sm:p-4">
+        <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#66645F]">Range</span>
+          <div className="flex flex-wrap gap-px bg-[#111111]">
           {PRESETS.map((p) => (
             <button
               key={p.key}
+              type="button"
               onClick={() => applyPreset(p)}
-              className="px-2.5 py-1 text-xs rounded-md transition-colors"
+              className={`min-h-11 flex-1 bg-[#F4F4F0] px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-[#111111] transition-colors hover:bg-[#DEDDD7] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010] ${active === p.key ? 'border-b-[3px] border-[#BC1010]' : ''}`}
               style={{
-                background: active === p.key ? 'var(--accent-blue)' : 'var(--bg-secondary)',
-                color: active === p.key ? '#fff' : 'var(--text-secondary)',
+                background: active === p.key ? '#111111' : '#F4F4F0',
+                color: active === p.key ? '#F4F4F0' : '#111111',
               }}
             >
               {p.label}
             </button>
           ))}
-        </div>
-        <div className="flex items-center gap-2 ml-auto">
+          </div>
+          <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
           <input
             type="datetime-local"
             value={range.from || ''}
             max={range.to || undefined}
             onChange={(e) => setBound('from', e.target.value)}
-            className="px-2 py-1 text-xs rounded-md"
+            aria-label="Range start"
+            className="min-h-11 min-w-0 px-2 text-xs font-mono focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
             style={inputStyle}
           />
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>→</span>
+          <span className="hidden font-mono text-xs text-[#66645F] sm:block">&gt;</span>
           <input
             type="datetime-local"
             value={range.to || ''}
             min={range.from || undefined}
             onChange={(e) => setBound('to', e.target.value)}
-            className="px-2 py-1 text-xs rounded-md"
+            aria-label="Range end"
+            className="min-h-11 min-w-0 px-2 text-xs font-mono focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
             style={inputStyle}
           />
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <SourceChart range={range} />
         <ModelChart range={range} />
       </div>

@@ -8,17 +8,15 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip);
 
 type Metric = 'cost' | 'tokens';
 
-// Token classes in stack order (bottom → top), cheapest-per-token first, so the
-// bulk of the volume sits underneath and the expensive slivers stay visible.
 const TOKEN_SERIES: { key: keyof HourlyEntry; label: string; color: string }[] = [
-  { key: 'cache_read', label: 'Cache read', color: '#22d3ee' },
-  { key: 'cache_write', label: 'Cache write', color: '#fbbf24' },
-  { key: 'input_tokens', label: 'Input', color: '#60a5fa' },
-  { key: 'output_tokens', label: 'Output', color: '#a78bfa' },
+  { key: 'cache_read', label: 'Cache read', color: '#D3D2CC' },
+  { key: 'cache_write', label: 'Cache write', color: '#999790' },
+  { key: 'input_tokens', label: 'Input', color: '#66645F' },
+  { key: 'output_tokens', label: 'Output', color: '#111111' },
 ];
 
-const COST_COLOR = '#22d3ee';
-const COST_PEAK = '#a78bfa';
+const COST_COLOR = '#111111';
+const COST_PEAK = '#BC1010';
 
 function fmtTokens(n: number): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
@@ -26,97 +24,100 @@ function fmtTokens(n: number): string {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
   return String(n);
 }
-const fmtCost = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(v < 10 ? 2 : 0)}`);
+const fmtCost = (value: number) => (value >= 1000 ? `$${(value / 1000).toFixed(1)}k` : `$${value.toFixed(value < 10 ? 2 : 0)}`);
+
+const tooltipStyle = {
+  backgroundColor: '#F4F4F0',
+  borderColor: '#111111',
+  borderWidth: 1,
+  padding: 10,
+  titleColor: '#111111',
+  bodyColor: '#111111',
+  footerColor: '#66645F',
+};
 
 export function HourlyChart({ range }: { range?: DateRange }) {
   const { data, loading } = useApi(() => api.getHourly(range), [range?.from, range?.to]);
   const [metric, setMetric] = useState<Metric>('cost');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
-
   const hours = useMemo(() => data || [], [data]);
 
   const totals = useMemo(() => {
-    const t = { cost: 0, input_tokens: 0, output_tokens: 0, cache_read: 0, cache_write: 0 };
-    for (const h of hours) {
-      t.cost += h.cost;
-      t.input_tokens += h.input_tokens;
-      t.output_tokens += h.output_tokens;
-      t.cache_read += h.cache_read;
-      t.cache_write += h.cache_write;
+    const total = { cost: 0, input_tokens: 0, output_tokens: 0, cache_read: 0, cache_write: 0 };
+    for (const hour of hours) {
+      total.cost += hour.cost;
+      total.input_tokens += hour.input_tokens;
+      total.output_tokens += hour.output_tokens;
+      total.cache_read += hour.cache_read;
+      total.cache_write += hour.cache_write;
     }
-    return t;
+    return total;
   }, [hours]);
 
   const allTokens = totals.input_tokens + totals.output_tokens + totals.cache_read + totals.cache_write;
-
-  // Busiest hour by the metric currently on screen.
   const peak = useMemo(() => {
-    let best = -1, bestVal = -1;
-    for (const h of hours) {
-      const v = metric === 'cost'
-        ? h.cost
-        : TOKEN_SERIES.reduce((s, t) => s + (hidden.has(t.label) ? 0 : (h[t.key] as number)), 0);
-      if (v > bestVal) { bestVal = v; best = h.hour; }
+    let best = -1;
+    let bestValue = -1;
+    for (const hour of hours) {
+      const value = metric === 'cost'
+        ? hour.cost
+        : TOKEN_SERIES.reduce((sum, series) => sum + (hidden.has(series.label) ? 0 : (hour[series.key] as number)), 0);
+      if (value > bestValue) {
+        bestValue = value;
+        best = hour.hour;
+      }
     }
-    return { hour: best, value: bestVal };
+    return { hour: best, value: bestValue };
   }, [hours, metric, hidden]);
 
   const chartData = useMemo(() => {
     if (metric === 'cost') {
       return {
-        labels: hours.map(h => String(h.hour)),
+        labels: hours.map(hour => String(hour.hour)),
         datasets: [{
-          label: 'Стоимость',
-          data: hours.map(h => h.cost),
-          backgroundColor: hours.map(h => (h.hour === peak.hour ? COST_PEAK : COST_COLOR)),
-          borderRadius: 3,
+          label: 'Cost',
+          data: hours.map(hour => hour.cost),
+          backgroundColor: hours.map(hour => hour.hour === peak.hour ? COST_PEAK : COST_COLOR),
+          borderRadius: 0,
           maxBarThickness: 30,
         }],
       };
     }
     return {
-      labels: hours.map(h => String(h.hour)),
-      datasets: TOKEN_SERIES.filter(t => !hidden.has(t.label)).map(t => ({
-        label: t.label,
-        data: hours.map(h => h[t.key] as number),
-        backgroundColor: t.color,
-        borderRadius: 2,
+      labels: hours.map(hour => String(hour.hour)),
+      datasets: TOKEN_SERIES.filter(series => !hidden.has(series.label)).map(series => ({
+        label: series.label,
+        data: hours.map(hour => hour[series.key] as number),
+        backgroundColor: series.color,
+        borderRadius: 0,
         maxBarThickness: 30,
       })),
     };
   }, [hours, metric, hidden, peak.hour]);
 
-  if (loading || !data) {
-    return <div className="h-72 animate-pulse rounded-xl" style={{ background: 'var(--bg-card)' }} />;
-  }
+  if (loading || !data) return <div className="min-h-96 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading hourly activity" />;
 
   const fmtValue = metric === 'cost' ? fmtCost : fmtTokens;
 
   return (
-    <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)' }}>
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+    <section className="border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
+      <div className="grid gap-4 border-b-2 border-[#111111] pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Расход по часам суток</h3>
-          <div className="flex items-baseline gap-3 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-mono text-base" style={{ color: 'var(--accent-cyan)' }}>
-              {metric === 'cost' ? `$${totals.cost.toFixed(2)}` : `${fmtTokens(allTokens)} токенов`}
-            </span>
-            {peak.hour >= 0 && peak.value > 0 && (
-              <span>пик в {String(peak.hour).padStart(2, '0')}:00 · {fmtValue(peak.value)}</span>
-            )}
+          <h3 className="text-2xl font-black uppercase tracking-[-0.06em] text-[#111111]">Hourly activity</h3>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-[#66645F]">
+            <span className="font-mono text-base font-bold text-[#111111]">{metric === 'cost' ? `$${totals.cost.toFixed(2)}` : `${fmtTokens(allTokens)} tokens`}</span>
+            {peak.hour >= 0 && peak.value > 0 && <span>Peak {String(peak.hour).padStart(2, '0')}:00 - {fmtValue(peak.value)}</span>}
           </div>
         </div>
-
-        <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
-          {([['cost', 'Стоимость'], ['tokens', 'Токены']] as [Metric, string][]).map(([key, label]) => (
+        <div role="group" aria-label="Hourly metric" className="grid grid-cols-2 gap-px border border-[#111111] bg-[#111111]">
+          {([['cost', 'Cost'], ['tokens', 'Tokens']] as [Metric, string][]).map(([key, label]) => (
             <button
               key={key}
+              type="button"
               onClick={() => setMetric(key)}
-              className="px-3 py-1 text-xs rounded-md transition-colors"
-              style={{
-                background: metric === key ? 'var(--accent-blue)' : 'transparent',
-                color: metric === key ? '#fff' : 'var(--text-secondary)',
-              }}
+              aria-pressed={metric === key}
+              className="min-h-11 px-4 text-xs font-bold uppercase tracking-[0.08em] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
+              style={{ background: metric === key ? '#111111' : '#F4F4F0', color: metric === key ? '#F4F4F0' : '#111111' }}
             >
               {label}
             </button>
@@ -125,34 +126,33 @@ export function HourlyChart({ range }: { range?: DateRange }) {
       </div>
 
       {metric === 'tokens' && (
-        // Cache reads outweigh everything else by orders of magnitude, so the
-        // toggles are what make input/output legible at all.
-        <div className="flex flex-wrap gap-2 mb-3">
-          {TOKEN_SERIES.map(t => {
-            const off = hidden.has(t.label);
-            const sum = totals[t.key as keyof typeof totals] as number;
+        <div className="mt-4 grid grid-cols-1 gap-px border border-[#111111] bg-[#111111] sm:grid-cols-2 lg:grid-cols-4">
+          {TOKEN_SERIES.map(series => {
+            const off = hidden.has(series.label);
+            const sum = totals[series.key as keyof typeof totals] as number;
             return (
               <button
-                key={t.label}
-                onClick={() => setHidden(prev => {
-                  const next = new Set(prev);
-                  if (next.has(t.label)) next.delete(t.label); else next.add(t.label);
+                key={series.label}
+                type="button"
+                onClick={() => setHidden(previous => {
+                  const next = new Set(previous);
+                  if (next.has(series.label)) next.delete(series.label); else next.add(series.label);
                   return next;
                 })}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-opacity"
-                style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', opacity: off ? 0.4 : 1 }}
-                title={off ? 'Показать' : 'Скрыть'}
+                aria-pressed={!off}
+                className="flex min-h-11 items-center gap-2 bg-[#F4F4F0] px-3 text-left text-xs focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
+                style={{ opacity: off ? 0.42 : 1 }}
               >
-                <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: off ? '#64748b' : t.color }} />
-                <span style={{ textDecoration: off ? 'line-through' : 'none' }}>{t.label}</span>
-                <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{fmtTokens(sum)}</span>
+                <span className="h-2.5 w-2.5 shrink-0 border border-[#111111]" style={{ background: series.color }} />
+                <span className="min-w-0 flex-1 truncate font-bold uppercase tracking-[0.06em] text-[#111111]">{series.label}</span>
+                <span className="font-mono text-[11px] tabular-nums text-[#66645F]">{fmtTokens(sum)}</span>
               </button>
             );
           })}
         </div>
       )}
 
-      <div style={{ height: 260 }}>
+      <div className="mt-5 h-64 sm:h-72">
         <Bar
           data={chartData}
           options={{
@@ -163,50 +163,40 @@ export function HourlyChart({ range }: { range?: DateRange }) {
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: 'rgba(15,23,42,0.95)',
-                borderColor: 'rgba(148,163,184,0.2)',
-                borderWidth: 1,
-                padding: 10,
-                titleColor: '#f8fafc',
-                bodyColor: '#e2e8f0',
-                footerColor: '#94a3b8',
+                ...tooltipStyle,
                 callbacks: {
                   title: (items: TooltipItem<'bar'>[]) => `${String(hours[items[0].dataIndex].hour).padStart(2, '0')}:00`,
-                  label: (ctx: TooltipItem<'bar'>) => {
-                    const v = typeof ctx.parsed.y === 'number' ? ctx.parsed.y : 0;
-                    if (v <= 0) return '';
-                    return metric === 'cost' ? ` $${v.toFixed(2)}` : ` ${ctx.dataset.label}: ${fmtTokens(v)}`;
+                  label: (context: TooltipItem<'bar'>) => {
+                    const value = typeof context.parsed.y === 'number' ? context.parsed.y : 0;
+                    if (value <= 0) return '';
+                    return metric === 'cost' ? ` $${value.toFixed(2)}` : ` ${context.dataset.label}: ${fmtTokens(value)}`;
                   },
                   footer: (items: TooltipItem<'bar'>[]) => {
-                    const h = hours[items[0].dataIndex];
-                    if (metric === 'cost') return `${h.sessions} сессий активно`;
-                    const sum = items.reduce((s, i) => s + (typeof i.parsed.y === 'number' ? i.parsed.y : 0), 0);
-                    return `Всего: ${fmtTokens(sum)} · $${h.cost.toFixed(2)}`;
+                    const hour = hours[items[0].dataIndex];
+                    if (metric === 'cost') return `${hour.sessions} active sessions`;
+                    const sum = items.reduce((total, item) => total + (typeof item.parsed.y === 'number' ? item.parsed.y : 0), 0);
+                    return `Total: ${fmtTokens(sum)} - $${hour.cost.toFixed(2)}`;
                   },
                 },
               },
             },
             scales: {
-              x: {
-                stacked: true,
-                ticks: { color: '#94a3b8', font: { size: 10 } },
-                grid: { display: false },
-              },
+              x: { stacked: true, ticks: { color: '#66645F', font: { size: 10, family: 'JetBrains Mono' } }, grid: { display: false }, border: { color: '#111111' } },
               y: {
                 stacked: true,
                 beginAtZero: true,
-                ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => fmtValue(Number(v)) },
-                grid: { color: 'rgba(148,163,184,0.08)' },
-                border: { display: false },
+                ticks: { color: '#66645F', font: { size: 10, family: 'JetBrains Mono' }, callback: value => fmtValue(Number(value)) },
+                grid: { color: '#D3D2CC' },
+                border: { color: '#111111' },
               },
             },
           }}
         />
       </div>
 
-      <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-        Час — местное время, по метке каждого сообщения, а не по началу сессии. Диапазон берется из графика выше.
+      <p className="mt-4 border-t border-[#DEDDD7] pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#66645F]">
+        Local message timestamp. Range follows the history chart.
       </p>
-    </div>
+    </section>
   );
 }

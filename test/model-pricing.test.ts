@@ -52,7 +52,7 @@ test('sorts null values last in both directions without mutating the source arra
 });
 
 test('formats missing, zero, and sub-cent prices distinctly', () => {
-  assert.equal(formatPrice(null), '—');
+  assert.equal(formatPrice(null), '-');
   assert.equal(formatPrice(0), '$0');
   assert.equal(formatPrice(0.000125), '$0.000125');
 });

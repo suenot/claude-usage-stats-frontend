@@ -59,7 +59,7 @@ export function sortModelPrices(
 }
 
 export function formatPrice(value: number | null): string {
-  if (value === null) return '—';
+  if (value === null) return '-';
   if (value === 0) return '$0';
   return `$${value.toLocaleString('en-US', {
     maximumFractionDigits: value < 1 ? 6 : 4,
@@ -67,5 +67,5 @@ export function formatPrice(value: number | null): string {
 }
 
 export function formatContext(value: number | null): string {
-  return value === null ? '—' : value.toLocaleString('en-US');
+  return value === null ? '-' : value.toLocaleString('en-US');
 }
