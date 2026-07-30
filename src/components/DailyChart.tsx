@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip,
@@ -13,6 +13,12 @@ import {
   type HistoryTimeframe,
 } from '../lib/api';
 import { colorForModel, colorForSource } from '../lib/model-colors';
+import {
+  defaultChartViewport,
+  normalizeChartViewport,
+  type ChartViewport,
+} from '../lib/chart-viewport';
+import { ActivityNavigator } from './ActivityNavigator';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip);
 
@@ -168,6 +174,21 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
     () => data && data.timeframe === timeframe && data.groupBy === groupBy ? compact(data.buckets) : [],
     [data, timeframe, groupBy],
   );
+  const [viewport, setViewport] = useState<ChartViewport>({ start: 0, end: 0 });
+  const preferredViewportSize = timeframe === '1d' ? 30 : 168;
+  const effectiveViewport = useMemo(() => (
+    viewport.end > 0
+      ? normalizeChartViewport(viewport, buckets.length)
+      : defaultChartViewport(buckets.length, preferredViewportSize)
+  ), [viewport, buckets.length, preferredViewportSize]);
+  const visibleBuckets = useMemo(
+    () => buckets.slice(effectiveViewport.start, effectiveViewport.end),
+    [buckets, effectiveViewport],
+  );
+
+  useEffect(() => {
+    setViewport(defaultChartViewport(buckets.length, preferredViewportSize));
+  }, [buckets.length, timeframe, preferredViewportSize]);
 
   const series = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -207,9 +228,9 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
 
   const geometry = () => {
     const chart = chartRef.current;
-    if (!chart || buckets.length === 0) return null;
+    if (!chart || visibleBuckets.length === 0) return null;
     const { left, right } = chart.chartArea;
-    return { left, right, step: (right - left) / buckets.length };
+    return { left, right, step: (right - left) / visibleBuckets.length };
   };
 
   const indexAt = (x: number) => {
@@ -217,7 +238,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
     if (!geometryValue) return 0;
     return Math.max(
       0,
-      Math.min(buckets.length - 1, Math.floor((x - geometryValue.left) / geometryValue.step)),
+      Math.min(visibleBuckets.length - 1, Math.floor((x - geometryValue.left) / geometryValue.step)),
     );
   };
 
@@ -253,7 +274,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
     const startIndex = indexAt(current.startX);
     const endIndex = indexAt(x);
     const band = bandFor(startIndex, endIndex);
-    const slice = buckets.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1);
+    const slice = visibleBuckets.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1);
     setDrag({
       ...band,
       count: slice.filter(isActiveBucket).length,
@@ -273,8 +294,8 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
 
     const startIndex = indexAt(current.startX);
     const endIndex = indexAt(localX(event));
-    const first = buckets[Math.min(startIndex, endIndex)].timestamp;
-    const last = buckets[Math.max(startIndex, endIndex)].timestamp;
+    const first = visibleBuckets[Math.min(startIndex, endIndex)].timestamp;
+    const last = visibleBuckets[Math.max(startIndex, endIndex)].timestamp;
     if (timeframe === '1d') {
       onRangeChange?.({ from: `${first}T00:00`, to: `${last}T23:59` });
     } else {
@@ -282,15 +303,20 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
     }
   };
 
+  const onPointerCancel = () => {
+    dragRef.current = null;
+    setDrag(null);
+  };
+
   const chartData = useMemo(() => ({
-    labels: buckets.map(bucket => fmtShort(bucket.timestamp, timeframe)),
+    labels: visibleBuckets.map(bucket => fmtShort(bucket.timestamp, timeframe)),
     datasets: series.filter(name => !hidden.has(name)).map(name => ({
       label: name,
-      data: buckets.map(bucket => {
+      data: visibleBuckets.map(bucket => {
         const value = bucket.values[name]?.[metric] || 0;
         return metric === 'tokens' ? value / 1_000_000 : value;
       }),
-      backgroundColor: buckets.map(bucket => {
+      backgroundColor: visibleBuckets.map(bucket => {
         const color = groupBy === 'model' ? colorForModel(name) : colorForSource(name);
         return hasRange && !inRange(bucket.timestamp) ? fade(color, 0.16) : color;
       }),
@@ -298,7 +324,12 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
       maxBarThickness: 34,
       yAxisID: 'value',
     })),
-  }), [buckets, series, hidden, metric, groupBy, timeframe, from, to, hasRange]);
+  }), [visibleBuckets, series, hidden, metric, groupBy, timeframe, from, to, hasRange]);
+
+  const navigatorBuckets = useMemo(() => buckets.map(bucket => ({
+    timestamp: bucket.timestamp,
+    total: metricTotal(bucket, metric),
+  })), [buckets, metric]);
 
   const empty = !loading && buckets.length === 0;
   const periodLabel = timeframe === '1d' ? 'активн. дн.' : 'активн. ч.';
@@ -376,18 +407,19 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                 else next.add(name);
                 return next;
               })}
-              className="flex min-h-11 items-center gap-1.5 border border-[#111111] bg-[#F4F4F0] px-2 text-xs transition-opacity focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
+              className="flex min-h-11 max-w-full min-w-0 items-center gap-1.5 border border-[#111111] bg-[#F4F4F0] px-2 text-xs transition-opacity focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]"
               style={{
                 opacity: off ? 0.4 : 1,
               }}
-              title={off ? 'Показать' : 'Скрыть'}
+              title={`${off ? 'Показать' : 'Скрыть'} ${name}`}
+              aria-label={`${off ? 'Показать' : 'Скрыть'} ${name}`}
             >
               <span
-                className="inline-block h-2.5 w-2.5 border border-[#111111]"
+                className="inline-block h-2.5 w-2.5 shrink-0 border border-[#111111]"
                 style={{ background: off ? '#DEDDD7' : color }}
               />
-              <span className="max-w-28 truncate font-bold uppercase tracking-[0.06em] text-[#111111]" style={{ textDecoration: off ? 'line-through' : 'none' }}>{name}</span>
-              <span className="font-mono text-[#66645F]">
+              <span className="min-w-0 break-words text-left font-bold uppercase tracking-[0.06em] text-[#111111]" style={{ textDecoration: off ? 'line-through' : 'none' }}>{name}</span>
+              <span className="shrink-0 font-mono text-[#66645F]">
                 {metric === 'usd'
                   ? money(selectedBySeries[name] || 0)
                   : `${((selectedBySeries[name] || 0) / 1_000_000).toFixed(1)}M`}
@@ -412,7 +444,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={onPointerCancel}
         >
           <Bar
             ref={chartRef}
@@ -436,7 +468,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
                   itemSort: (a, b) => (b.parsed.y as number) - (a.parsed.y as number),
                   callbacks: {
                     title: (items: TooltipItem<'bar'>[]) => (
-                      fmtLong(buckets[items[0].dataIndex].timestamp, timeframe)
+                      fmtLong(visibleBuckets[items[0].dataIndex].timestamp, timeframe)
                     ),
                     label: (context: TooltipItem<'bar'>) => {
                       const value = typeof context.parsed.y === 'number' ? context.parsed.y : 0;
@@ -508,8 +540,17 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
         </div>
       )}
 
+      {!loading && !empty && (
+        <ActivityNavigator
+          buckets={navigatorBuckets}
+          viewport={effectiveViewport}
+          timeframe={timeframe}
+          onViewportChange={setViewport}
+        />
+      )}
+
       <p className="mt-4 border-t border-[#DEDDD7] pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#66645F]">
-        Drag to set a range. Click to reset. Empty {timeframe === '1d' ? 'days' : 'hours'} are compacted.
+        Drag the main chart to filter. Click it to reset. Drag or resize the navigator to change the visible window. Empty {timeframe === '1d' ? 'days' : 'hours'} are compacted.
       </p>
     </section>
   );

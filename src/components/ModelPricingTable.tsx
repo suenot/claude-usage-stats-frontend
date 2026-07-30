@@ -161,27 +161,30 @@ export function ModelPricingTable() {
 
       {error && data && <p role="alert" className="border-b px-4 py-3 font-mono text-xs font-bold sm:px-6" style={{ borderColor: line, background: soft, color: red }}>REFRESH FAILED. CURRENT DATA IS STILL SHOWN.</p>}
 
-      <div className="grid gap-px border-b p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end sm:p-4" style={{ borderColor: line, background: line }}>
-        <label className="block" style={{ background: paper }}>
-          <span className="block px-3 pt-3 font-mono text-[10px] font-bold tracking-[0.1em]" style={{ color: muted }}>SEARCH</span>
-          <div className="flex">
+      <div className="grid gap-px border-b p-3 sm:p-4 md:grid-cols-[minmax(0,1fr)_10rem_16rem] md:items-stretch" style={{ borderColor: line, background: line }}>
+        <div className="flex min-w-0 flex-col" style={{ background: paper }}>
+          <label htmlFor="model-pricing-search" className="block px-3 pt-3 font-mono text-[10px] font-bold tracking-[0.1em]" style={{ color: muted }}>SEARCH</label>
+          <div className="flex min-h-11 flex-1 items-center">
             <input id="model-pricing-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Model, provider, or ID" className="min-h-11 min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-stone-500 focus-visible:outline-2 focus-visible:outline-offset-[-3px]" style={{ color: ink, outlineColor: red }} />
-            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear model search" className="min-h-11 min-w-11 border-l px-3 font-mono text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-[-3px]" style={{ borderColor: line, color: ink, outlineColor: red }}>X</button>}
+            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear model search" className="min-h-11 min-w-11 border-l px-3 font-mono text-sm font-bold transition-colors hover:bg-[#DEDDD7] active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-[-3px]" style={{ borderColor: line, color: ink, outlineColor: red }}>X</button>}
           </div>
-        </label>
-        <label className="flex min-h-11 items-center gap-3 p-3 font-mono text-[10px] font-bold tracking-[0.08em]" style={{ background: paper, color: ink }}>
-          <input type="checkbox" checked={showAllModels} onChange={event => setShowAllModels(event.target.checked)} className="h-4 w-4 appearance-none border checked:bg-[#BC1010] focus-visible:outline-2 focus-visible:outline-offset-2" style={{ borderColor: line, outlineColor: red }} />
-          ALL MODELS
-        </label>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-px" style={{ background: line }}>
-          <label className="block" style={{ background: paper }}>
-            <span className="block px-3 pt-3 font-mono text-[10px] font-bold tracking-[0.1em]" style={{ color: muted }}>SORT</span>
-            <select value={sort?.key ?? ''} onChange={event => setSortKey(event.target.value as ModelPriceSortKey | '')} className="min-h-11 w-full bg-transparent px-3 py-2 font-mono text-xs font-bold outline-none focus-visible:outline-2 focus-visible:outline-offset-[-3px]" style={{ color: ink, outlineColor: red }}>
+        </div>
+        <div className="flex min-w-0 flex-col" style={{ background: paper }}>
+          <span className="block px-3 pt-3 font-mono text-[10px] font-bold tracking-[0.1em]" style={{ color: muted }}>SCOPE</span>
+          <label className="flex min-h-11 flex-1 items-center gap-3 px-3 py-2 font-mono text-[10px] font-bold tracking-[0.08em]" style={{ color: ink }}>
+            <input type="checkbox" checked={showAllModels} onChange={event => setShowAllModels(event.target.checked)} className="h-4 w-4 shrink-0 accent-[#BC1010] focus-visible:outline-2 focus-visible:outline-offset-2" style={{ outlineColor: red }} />
+            ALL MODELS
+          </label>
+        </div>
+        <div className="flex min-w-0 flex-col" style={{ background: paper }}>
+          <label htmlFor="model-pricing-sort" className="block px-3 pt-3 font-mono text-[10px] font-bold tracking-[0.1em]" style={{ color: muted }}>SORT</label>
+          <div className="grid min-h-11 flex-1 grid-cols-[minmax(0,1fr)_3rem]">
+            <select id="model-pricing-sort" value={sort?.key ?? ''} onChange={event => setSortKey(event.target.value as ModelPriceSortKey | '')} className="min-h-11 min-w-0 bg-transparent px-3 py-2 font-mono text-xs font-bold outline-none focus-visible:outline-2 focus-visible:outline-offset-[-3px]" style={{ color: ink, outlineColor: red }}>
               <option value="">DEFAULT</option>
               {columns.map(column => <option key={column.key} value={column.key}>{column.label.toUpperCase()}</option>)}
             </select>
-          </label>
-          <button type="button" onClick={() => sort && toggleSort(sort.key)} disabled={!sort} aria-label="Reverse sort direction" className="min-h-11 min-w-11 self-end border-l px-3 font-mono text-lg font-bold focus-visible:outline-2 focus-visible:outline-offset-[-3px] disabled:opacity-30" style={{ borderColor: line, background: paper, color: red, outlineColor: red }}>{sort?.direction === 'desc' ? '↓' : '↑'}</button>
+            <button type="button" onClick={() => sort && toggleSort(sort.key)} disabled={!sort} aria-label={sort ? `Change sort direction to ${sort.direction === 'asc' ? 'descending' : 'ascending'}` : 'Choose a sort field first'} className="min-h-11 border-l font-mono text-lg font-bold transition-colors hover:bg-[#DEDDD7] active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-[-3px] disabled:cursor-not-allowed disabled:bg-[#DEDDD7] disabled:text-[#77746E] disabled:hover:bg-[#DEDDD7] disabled:active:translate-y-0" style={{ borderColor: line, color: sort ? red : undefined, outlineColor: red }}>{sort?.direction === 'desc' ? '↓' : '↑'}</button>
+          </div>
         </div>
       </div>
 
