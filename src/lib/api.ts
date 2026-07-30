@@ -116,6 +116,12 @@ export interface CacheStats {
   by_model: CacheModelRow[];
 }
 
+export interface ProjectBreakdownEntry {
+  usd: number;
+  tokens: number;
+  sessions: number;
+}
+
 export interface ProjectEntry {
   cwd: string;
   cost: number;
@@ -123,6 +129,8 @@ export interface ProjectEntry {
   sessions: number;
   sources: string[];
   models: string[];
+  byModel: Record<string, ProjectBreakdownEntry>;
+  byHarness: Record<string, ProjectBreakdownEntry>;
 }
 
 export interface ModelPrice {
