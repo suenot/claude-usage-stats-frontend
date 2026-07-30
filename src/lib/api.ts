@@ -119,6 +119,7 @@ export interface CacheStats {
 export interface ProjectEntry {
   cwd: string;
   cost: number;
+  tokens: number;
   sessions: number;
   sources: string[];
   models: string[];
