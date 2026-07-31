@@ -6,6 +6,26 @@ export interface AuthSession {
   services: Record<string, string>;
 }
 
+let activeExchange: { key: string; promise: Promise<Response> } | null = null;
+
+export function exchangeSsoCode(
+  authApiUrl: string,
+  code: string,
+  redirectUri: string,
+  fetcher: typeof fetch = fetch,
+): Promise<Response> {
+  const key = `${code}\n${redirectUri}`;
+  if (activeExchange?.key !== key) {
+    const promise = fetcher(`${authApiUrl.replace(/\/$/, '')}/sso/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+    activeExchange = { key, promise };
+  }
+  return activeExchange.promise.then(response => response.clone());
+}
+
 export function hasServiceAccess(session: AuthSession, service: string): boolean {
   return session.services?.[service] === 'admin';
 }

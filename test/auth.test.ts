@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   createAuthorizeUrl,
   createLoginUrl,
+  exchangeSsoCode,
   hasServiceAccess,
   safeInternalPath,
 } from '../src/lib/auth';
@@ -44,4 +45,19 @@ test('requires an explicit admin role for Harness Analyzer', () => {
   assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'admin' } }, 'harness-analyzer'), true);
   assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'viewer' } }, 'harness-analyzer'), false);
   assert.equal(hasServiceAccess({ ...base, services: {} }, 'harness-analyzer'), false);
+});
+
+test('deduplicates a one-time SSO code exchange under Strict Mode', async () => {
+  let calls = 0;
+  const fetcher = (async () => {
+    calls++;
+    return new Response('{}', { status: 200 });
+  }) as typeof fetch;
+
+  const first = exchangeSsoCode('https://auth.marketmaker.cc/api/v1', 'single-use-code', 'http://127.0.0.1:5173/auth/callback', fetcher);
+  const second = exchangeSsoCode('https://auth.marketmaker.cc/api/v1', 'single-use-code', 'http://127.0.0.1:5173/auth/callback', fetcher);
+
+  assert.equal((await first).status, 200);
+  assert.equal((await second).status, 200);
+  assert.equal(calls, 1);
 });

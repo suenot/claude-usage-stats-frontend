@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { pathForTab, shouldHandleSpaNavigation, tabFromPath } from '../src/lib/navigation.ts';
+import { pathForTab, routeKindFromPath, shouldHandleSpaNavigation, tabFromPath } from '../src/lib/navigation.ts';
+
+test('keeps landing and auth callback outside protected app routes', () => {
+  assert.equal(routeKindFromPath('/'), 'landing');
+  assert.equal(routeKindFromPath('/auth/callback'), 'callback');
+  assert.equal(routeKindFromPath('/dashboard'), 'protected');
+  assert.equal(routeKindFromPath('/models/'), 'protected');
+});
 
 test('maps supported routes and normalizes root and unknown paths to dashboard', () => {
   assert.equal(tabFromPath('/'), 'dashboard');
