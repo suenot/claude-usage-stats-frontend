@@ -24,7 +24,7 @@ export function Heatmap({ range }: { range?: DateRange }) {
   const maxCost = Math.max(...visibleData.map(entry => entry.cost), 0.01);
   const cellMap: Record<string, HeatmapEntry> = {};
   for (const entry of visibleData) cellMap[`${entry.date}|${entry.hour}`] = entry;
-  const analytics = buildPeakHoursAnalytics(visibleData);
+  const analytics = buildPeakHoursAnalytics(visibleData, range);
 
   return (
     <section className="border-2 border-[#111111] bg-[#F4F4F0] p-4 sm:p-5">
@@ -40,7 +40,11 @@ export function Heatmap({ range }: { range?: DateRange }) {
       </header>
       <div className="mt-4 grid gap-4 xl:grid-cols-[max-content_minmax(18rem,1fr)] xl:items-stretch">
         <div className="min-w-0 overflow-x-auto pb-2">
-          <div className="flex w-max gap-px bg-[#111111] p-px">
+          <div
+            className="flex w-max gap-px bg-[#111111] p-px"
+            role="img"
+            aria-label={`Peak hours heatmap for ${dates.length} active days. Highest cost cells are red; lower activity is gray.`}
+          >
             <div className="mr-1 flex flex-col gap-px bg-[#F4F4F0] pr-1">
               <div className="h-6" />
               {dates.map(date => (

@@ -45,9 +45,36 @@ test('ignores invalid values without mutating input', () => {
   const analytics = buildPeakHoursAnalytics(source);
 
   assert.equal(analytics.activeDays, 1);
+  assert.equal(analytics.peakRepeatabilityPct, 0);
   assert.equal(analytics.spikeDependencyPct, 0);
   assert.equal(analytics.mostConsistentHour, 12);
   assert.deepEqual(source, snapshot);
+});
+
+test('normalizes recurrence for partial boundary days', () => {
+  const analytics = buildPeakHoursAnalytics([
+    { date: '2026-07-30', hour: 12, cost: 2, sessions: 1 },
+    { date: '2026-07-31', hour: 8, cost: 1, sessions: 1 },
+  ], {
+    from: '2026-07-30T12:00',
+    to: '2026-07-31T11:59',
+  });
+
+  assert.equal(analytics.activeDays, 2);
+  assert.equal(analytics.recurringHours.find(hour => hour.hour === 12)?.recurrencePct, 100);
+  assert.equal(analytics.recurringHours.find(hour => hour.hour === 8)?.recurrencePct, 100);
+});
+
+test('resolves equal-cost peaks by recurrence regardless of input order', () => {
+  const source: HeatmapEntry[] = [
+    { date: '2026-07-29', hour: 18, cost: 5, sessions: 1 },
+    { date: '2026-07-30', hour: 10, cost: 5, sessions: 1 },
+    { date: '2026-07-31', hour: 10, cost: 1, sessions: 1 },
+  ];
+
+  const expected = 100 / 3 * 2;
+  assert.ok(Math.abs(buildPeakHoursAnalytics(source).peakRepeatabilityPct - expected) < 1e-10);
+  assert.ok(Math.abs(buildPeakHoursAnalytics([...source].reverse()).peakRepeatabilityPct - expected) < 1e-10);
 });
 
 test('returns a stable empty state and formats hours', () => {

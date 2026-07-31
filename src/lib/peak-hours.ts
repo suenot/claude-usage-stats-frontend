@@ -1,4 +1,4 @@
-import type { HeatmapEntry } from './api';
+import type { DateRange, HeatmapEntry } from './api';
 
 export interface RecurringHour {
   hour: number;
@@ -15,7 +15,15 @@ export interface PeakHoursAnalytics {
   recurringHours: RecurringHour[];
 }
 
-export function buildPeakHoursAnalytics(entries: HeatmapEntry[]): PeakHoursAnalytics {
+function isHourInRange(date: string, hour: number, range?: DateRange): boolean {
+  const hourStart = `${date}T${String(hour).padStart(2, '0')}:00`;
+  const hourEnd = `${date}T${String(hour).padStart(2, '0')}:59`;
+  const from = range?.from?.length === 10 ? `${range.from}T00:00` : range?.from;
+  const to = range?.to?.length === 10 ? `${range.to}T23:59` : range?.to;
+  return (!from || hourEnd >= from) && (!to || hourStart <= to);
+}
+
+export function buildPeakHoursAnalytics(entries: HeatmapEntry[], range?: DateRange): PeakHoursAnalytics {
   const cells = new Map<string, { date: string; hour: number; cost: number; sessions: number }>();
 
   for (const entry of entries) {
@@ -30,7 +38,8 @@ export function buildPeakHoursAnalytics(entries: HeatmapEntry[]): PeakHoursAnaly
   }
 
   const activeCells = [...cells.values()].filter(cell => cell.cost > 0 || cell.sessions > 0);
-  const activeDays = new Set(activeCells.map(cell => cell.date)).size;
+  const activeDates = [...new Set(activeCells.map(cell => cell.date))];
+  const activeDays = activeDates.length;
   const totalCost = activeCells.reduce((total, cell) => total + cell.cost, 0);
   const hourStats = new Map<number, { dates: Set<string>; cost: number }>();
 
@@ -45,15 +54,23 @@ export function buildPeakHoursAnalytics(entries: HeatmapEntry[]): PeakHoursAnaly
     .map(([hour, stat]) => ({
       hour,
       activeDays: stat.dates.size,
-      recurrencePct: activeDays > 0 ? (stat.dates.size / activeDays) * 100 : 0,
+      recurrencePct: (() => {
+        const eligibleDays = activeDates.filter(date => isHourInRange(date, hour, range)).length;
+        return eligibleDays > 0 ? (stat.dates.size / eligibleDays) * 100 : 0;
+      })(),
       costSharePct: totalCost > 0 ? (stat.cost / totalCost) * 100 : 0,
     }))
     .sort((a, b) => b.recurrencePct - a.recurrencePct || b.costSharePct - a.costSharePct || a.hour - b.hour);
 
-  const peakCell = activeCells.reduce<typeof activeCells[number] | null>(
-    (peak, cell) => !peak || cell.cost > peak.cost ? cell : peak,
-    null,
-  );
+  const recurrenceByHour = new Map(recurringHours.map(hour => [hour.hour, hour.recurrencePct]));
+  const peakCell = activeCells
+    .filter(cell => cell.cost > 0)
+    .sort((a, b) => (
+      b.cost - a.cost
+      || (recurrenceByHour.get(b.hour) || 0) - (recurrenceByHour.get(a.hour) || 0)
+      || a.date.localeCompare(b.date)
+      || a.hour - b.hour
+    ))[0] || null;
   const peakHour = peakCell ? recurringHours.find(hour => hour.hour === peakCell.hour) : undefined;
 
   return {
