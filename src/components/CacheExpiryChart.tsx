@@ -162,7 +162,7 @@ export function CacheExpiryChart({ range }: { range?: DateRange }) {
             {[
               { label: 'Incidents', value: data.incidents.toLocaleString('en-US') },
               { label: 'Idle time', value: formatIdle(data.total_idle_minutes) },
-              { label: 'Coverage', value: `${coveragePct.toFixed(0)}%` },
+              { label: 'Observed TTL sessions', value: `${coveragePct.toFixed(0)}%` },
             ].map(stat => (
               <div key={stat.label} className="min-w-0 bg-[#F4F4F0] px-3 py-3">
                 <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[#66645F]">{stat.label}</dt>
