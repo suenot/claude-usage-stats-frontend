@@ -20,7 +20,7 @@ function exporterMessage(error: unknown, stage: PublicationStage): string {
 }
 
 export function ProfilePage() {
-  const { session, logout } = useHarnessAuth();
+  const { session, logout, updateOwnHandle } = useHarnessAuth();
   const { data, loading, error, refetch } = useApi(() => publicApi.getSharing(), []);
   const [form, setForm] = useState<SharingSettings | null>(null);
   const [persisted, setPersisted] = useState<SharingSettings | null>(null);
@@ -54,11 +54,13 @@ export function ProfilePage() {
       });
       setForm(next);
       setPersisted(next);
+      updateOwnHandle(next.handle);
       setSaved(true);
     } catch (cause) {
       if (cause instanceof SharingPublicationError && cause.safeSettings) {
         setForm(cause.safeSettings);
         setPersisted(cause.safeSettings);
+        updateOwnHandle(cause.safeSettings.handle);
       }
       setSaveError(form.visibility === 'private'
         ? (cause instanceof Error && cause.message ? cause.message : 'Sharing settings could not be saved.')

@@ -13,8 +13,8 @@ function getLevel(cost: number, max: number): number {
 
 const LEVEL_COLORS = ['#F4F4F0', '#DEDDD7', '#AAA8A0', '#66645F', '#BC1010'];
 
-export function Heatmap({ range }: { range?: DateRange }) {
-  const { data, loading } = useApi(() => api.getHeatmap(range), [range?.from, range?.to]);
+export function Heatmap({ range, entries }: { range?: DateRange; entries?: HeatmapEntry[] }) {
+  const { data, loading } = useApi(() => entries ? Promise.resolve(entries) : api.getHeatmap(range), [entries, range?.from, range?.to]);
   if (loading || !data) return <div className="min-h-44 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading peak hours" />;
 
   const allDates = [...new Set(data.map(entry => entry.date))].sort();

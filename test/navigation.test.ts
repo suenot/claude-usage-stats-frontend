@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   isValidPublicHandle,
   parseRoute,
+  pathForPublicProfile,
   pathForTab,
   routeKindFromPath,
   shouldHandleSpaNavigation,
@@ -24,6 +25,11 @@ test('classifies public, protected, callback and missing routes', () => {
   assert.equal(routeKindFromPath('/profile'), 'protected');
   assert.equal(routeKindFromPath('/dashboard'), 'protected');
   assert.equal(routeKindFromPath('/missing'), 'not-found');
+});
+
+test('builds canonical public profile paths from persisted handles', () => {
+  assert.equal(pathForPublicProfile(' Suenot '), '/u/suenot');
+  assert.throws(() => pathForPublicProfile('bad/handle'), /Invalid public handle/);
 });
 
 test('validates canonical public handles and rejects system names', () => {

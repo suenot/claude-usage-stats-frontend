@@ -67,6 +67,12 @@ export function pathForTab(tab: Tab): string {
   return `/${tab}`;
 }
 
+export function pathForPublicProfile(handle: string): string {
+  const normalized = handle.trim().toLowerCase();
+  if (!isValidPublicHandle(normalized)) throw new Error('Invalid public handle');
+  return `/u/${encodeURIComponent(normalized)}`;
+}
+
 export function tabFromPath(pathname: string): Tab {
   const route = parseRoute(pathname);
   return route.kind === 'app' ? route.tab : 'dashboard';

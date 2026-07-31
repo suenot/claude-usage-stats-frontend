@@ -3,6 +3,7 @@ import { useApi } from '../hooks/useApi';
 import {
   api,
   type CacheExpiryIncident,
+  type CacheExpiryStats,
   type DateRange,
 } from '../lib/api';
 import type { UsageMetric } from '../lib/usage-chart';
@@ -61,10 +62,10 @@ function CacheExpiryLoading() {
   );
 }
 
-export function CacheExpiryChart({ range }: { range?: DateRange }) {
+export function CacheExpiryChart({ range, stats }: { range?: DateRange; stats?: CacheExpiryStats }) {
   const { data, loading, error, refetch } = useApi(
-    () => api.getCacheExpiry(range),
-    [range?.from, range?.to],
+    () => stats ? Promise.resolve(stats) : api.getCacheExpiry(range),
+    [stats, range?.from, range?.to],
   );
   const [metric, setMetric] = useState<UsageMetric>('usd');
 

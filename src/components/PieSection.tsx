@@ -1,10 +1,38 @@
 import { useState } from 'react';
-import type { DateRange } from '../lib/api';
+import type { CacheExpiryStats, DateRange, PublicSnapshotDetails } from '../lib/api';
 import { SourceChart } from './SourceChart';
 import { ModelChart } from './ModelChart';
 import { HourlyChart } from './HourlyChart';
 import { CacheChart } from './CacheChart';
 import { CacheExpiryChart } from './CacheExpiryChart';
+
+const EMPTY_PUBLIC_CACHE: PublicSnapshotDetails['cache'] = {
+  actual_cost: 0,
+  no_cache_cost: 0,
+  saved: 0,
+  saved_pct: 0,
+  input_tokens: 0,
+  output_tokens: 0,
+  cache_read: 0,
+  cache_write: 0,
+  hit_rate: 0,
+  by_model: [],
+};
+
+const EMPTY_PUBLIC_CACHE_EXPIRY: CacheExpiryStats = {
+  estimated_lost_cost: 0,
+  estimated_expired_tokens: 0,
+  incidents: 0,
+  total_idle_minutes: 0,
+  by_ttl: {
+    '5m': { cost: 0, tokens: 0, incidents: 0 },
+    '1h': { cost: 0, tokens: 0, incidents: 0 },
+  },
+  by_model: [],
+  top_incidents: [],
+  coverage: { eligible_sessions: 0, excluded_sessions: 0, analyzed_events: 0, sources: [] },
+  methodology: 'heuristic-v1',
+};
 
 // Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" - matches <input type="datetime-local">.
 // We format in local time (not toISOString, which is UTC).
@@ -37,7 +65,7 @@ const PRESETS: { key: PresetKey; label: string; range: () => DateRange }[] = [
   { key: 'month', label: 'Этот месяц', range: () => ({ from: fmtDT(monthStart()), to: fmtDT(new Date()) }) },
 ];
 
-export function PieSection({ range, setRange }: { range: DateRange; setRange: (r: DateRange) => void }) {
+export function PieSection({ range, setRange, details, publishedSnapshot = false }: { range: DateRange; setRange: (r: DateRange) => void; details?: PublicSnapshotDetails; publishedSnapshot?: boolean }) {
   // `range` is owned by App so the daily chart and the presets stay in sync.
   // We remember which preset produced which bounds; once the range moves on
   // (chart drag, manual input), nothing is highlighted - otherwise a stale
@@ -63,7 +91,9 @@ export function PieSection({ range, setRange }: { range: DateRange; setRange: (r
 
   return (
     <div className="space-y-5">
-      <section aria-label="Date range" className="border-2 border-[#111111] bg-[#F4F4F0] p-3 sm:p-4">
+      {publishedSnapshot ? (
+        <section aria-label="Published snapshot range" className="border-2 border-[#111111] bg-[#F4F4F0] p-4 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[#66645F]">All-time published snapshot</section>
+      ) : <section aria-label="Date range" className="border-2 border-[#111111] bg-[#F4F4F0] p-3 sm:p-4">
         <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
           <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#66645F]">Range</span>
           <div className="flex flex-wrap gap-px bg-[#111111]">
@@ -104,18 +134,18 @@ export function PieSection({ range, setRange }: { range: DateRange; setRange: (r
           />
           </div>
         </div>
-      </section>
+      </section>}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SourceChart range={range} />
-        <ModelChart range={range} />
+        <SourceChart range={publishedSnapshot ? undefined : range} data={publishedSnapshot ? details?.by_harness ?? {} : undefined} />
+        <ModelChart range={publishedSnapshot ? undefined : range} usage={publishedSnapshot ? details?.by_model ?? {} : undefined} />
       </div>
 
-      <HourlyChart range={range} />
+      <HourlyChart range={publishedSnapshot ? undefined : range} entries={publishedSnapshot ? details?.hourly ?? [] : undefined} />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start">
-        <CacheExpiryChart range={range} />
-        <CacheChart range={range} />
+        <CacheExpiryChart range={publishedSnapshot ? undefined : range} stats={publishedSnapshot ? details?.cache_expiry ? { ...details.cache_expiry, top_incidents: [] } as CacheExpiryStats : EMPTY_PUBLIC_CACHE_EXPIRY : undefined} />
+        <CacheChart range={publishedSnapshot ? undefined : range} stats={publishedSnapshot ? details?.cache ?? EMPTY_PUBLIC_CACHE : undefined} />
       </div>
     </div>
   );

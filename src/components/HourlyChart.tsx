@@ -147,8 +147,8 @@ function HourlyShareChart({
   );
 }
 
-export function HourlyChart({ range }: { range?: DateRange }) {
-  const { data, loading } = useApi(() => api.getHourly(range), [range?.from, range?.to]);
+export function HourlyChart({ range, entries }: { range?: DateRange; entries?: HourlyEntry[] }) {
+  const { data, loading } = useApi(() => entries ? Promise.resolve(entries) : api.getHourly(range), [entries, range?.from, range?.to]);
   const [metric, setMetric] = useState<HourlyMetric>('cost');
   const [hidden, setHidden] = useState<Set<HourlyTokenKey>>(new Set());
   const hours = useMemo(() => data || [], [data]);

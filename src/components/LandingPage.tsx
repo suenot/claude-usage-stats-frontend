@@ -1,4 +1,5 @@
 import type { AuthSession } from '../lib/auth';
+import { SiteHeader } from './SiteHeader';
 
 export type LandingAuthStatus = 'checking' | 'anonymous' | 'authenticated' | 'forbidden' | 'error';
 
@@ -8,55 +9,18 @@ interface LandingPageProps {
   message?: string | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  ownHandle?: string | null;
+  showPrivateNavigation?: boolean;
 }
 
-function AuthAction({ status, onSignIn, onSignOut }: Pick<LandingPageProps, 'status' | 'onSignIn' | 'onSignOut'>) {
-  const baseClass = 'inline-flex min-h-16 shrink-0 items-center justify-center border-0 border-l border-[var(--line-strong)] px-5 font-mono text-[11px] font-bold uppercase tracking-[0.08em] transition-[background-color,color,transform] active:translate-y-px md:min-w-40';
-
-  if (status === 'authenticated') {
-    return <a href="/dashboard" className={`${baseClass} bg-[var(--signal)] text-white hover:bg-[var(--ink)]`}>Open dashboard</a>;
-  }
-  if (status === 'checking') {
-    return <span aria-live="polite" className={`${baseClass} cursor-wait bg-[var(--paper-deep)] text-[var(--muted)]`}>Checking account</span>;
-  }
-  if (status === 'forbidden') {
-    return <button type="button" onClick={onSignOut} className={`${baseClass} bg-[var(--paper)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--paper)]`}>Switch account</button>;
-  }
-  return <button type="button" onClick={onSignIn} className={`${baseClass} bg-[var(--signal)] text-white hover:bg-[var(--ink)]`}>Sign in</button>;
-}
-
-export function LandingPage({ status, session, message, onSignIn, onSignOut }: LandingPageProps) {
+export function LandingPage({ status, session, message, onSignIn, onSignOut, ownHandle, showPrivateNavigation }: LandingPageProps) {
   const notice = status === 'forbidden'
     ? 'This account does not have Harness Analyzer access. Switch accounts or ask an administrator for access.'
     : message;
 
   return (
     <div className="min-h-[100dvh] bg-[var(--paper)] text-[var(--ink)]">
-      <header className="sticky top-0 z-30 border-b border-[var(--line-strong)] bg-[var(--paper)]">
-        <div className="mx-auto grid min-h-16 max-w-[1440px] grid-cols-[minmax(0,1fr)_auto] items-stretch">
-          <a href="/" className="flex min-w-0 items-center px-3 no-underline md:px-5" aria-label="Harness Analyzer home">
-            <img src="/harness-analyzer-logo.png" alt="" aria-hidden="true" className="h-11 w-11 shrink-0 object-contain mix-blend-multiply" />
-            <div className="ml-3 min-w-0">
-              <p className="truncate text-base font-black uppercase leading-none tracking-[-0.035em] md:text-lg">Harness Analyzer</p>
-              <p className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)] sm:block">Local usage telemetry</p>
-            </div>
-          </a>
-
-          <div className="flex items-stretch">
-            <nav aria-label="Landing navigation" className="hidden items-stretch md:flex">
-              <a href="/users" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Users</a>
-              <a href="#capabilities" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Capabilities</a>
-              <a href="#method" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Method</a>
-            </nav>
-            {session ? (
-              <span className="hidden max-w-48 items-center truncate border-l border-[var(--line-strong)] px-4 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--muted)] xl:flex" title={session.email}>
-                {session.email}
-              </span>
-            ) : null}
-            <AuthAction status={status} onSignIn={onSignIn} onSignOut={onSignOut} />
-          </div>
-        </div>
-      </header>
+      <SiteHeader session={session} publicOnly={!showPrivateNavigation} dashboardPath={ownHandle ? `/u/${encodeURIComponent(ownHandle)}` : '/dashboard'} authStatus={status} onSignIn={status === 'forbidden' ? onSignOut : onSignIn} />
 
       {notice ? (
         <div role="status" className="border-b border-[var(--line-strong)] bg-[#F4E7E2] px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-5 tracking-[0.06em] text-[var(--signal)]">

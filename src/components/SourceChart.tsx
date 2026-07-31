@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useApi } from '../hooks/useApi';
-import { api, type DateRange } from '../lib/api';
+import { api, type DateRange, type UsageBreakdown } from '../lib/api';
 import { colorForSource } from '../lib/model-colors';
 import { formatUsageMetric, formatUsageSummary, usageSlices, type UsageMetric } from '../lib/usage-chart';
 import { UsageMetricToggle } from './UsageMetricToggle';
@@ -20,9 +20,9 @@ const chartTooltip = {
   displayColors: true,
 };
 
-export function SourceChart({ range }: { range?: DateRange }) {
+export function SourceChart({ range, data }: { range?: DateRange; data?: UsageBreakdown }) {
   const [metric, setMetric] = useState<UsageMetric>('usd');
-  const { data: usage, loading } = useApi(() => api.getSourceUsage(range), [range?.from, range?.to]);
+  const { data: usage, loading } = useApi(() => data ? Promise.resolve(data) : api.getSourceUsage(range), [data, range?.from, range?.to]);
   if (loading || !usage) {
     return <div className="min-h-96 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading harness split" />;
   }

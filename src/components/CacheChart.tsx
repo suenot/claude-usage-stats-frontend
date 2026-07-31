@@ -1,5 +1,5 @@
 import { useApi } from '../hooks/useApi';
-import { api, type DateRange } from '../lib/api';
+import { api, type CacheStats, type DateRange } from '../lib/api';
 import { colorForModel } from '../lib/model-colors';
 
 const dollars = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
@@ -10,8 +10,8 @@ function fmtTokens(value: number): string {
   return String(value);
 }
 
-export function CacheChart({ range }: { range?: DateRange }) {
-  const { data, loading } = useApi(() => api.getCache(range), [range?.from, range?.to]);
+export function CacheChart({ range, stats }: { range?: DateRange; stats?: CacheStats }) {
+  const { data, loading } = useApi(() => stats ? Promise.resolve(stats) : api.getCache(range), [stats, range?.from, range?.to]);
   if (loading || !data) return <div className="min-h-80 border-2 border-[#111111] bg-[#DEDDD7] animate-pulse" aria-label="Loading cache impact" />;
 
   if (data.no_cache_cost <= 0) {

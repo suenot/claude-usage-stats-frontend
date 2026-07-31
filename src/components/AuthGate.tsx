@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { setAccessToken } from '../lib/api';
+import { publicApi, setAccessToken } from '../lib/api';
 import {
   createAuthorizeUrl,
   exchangeSsoCode,
@@ -8,7 +8,7 @@ import {
   safeInternalPath,
   type AuthSession,
 } from '../lib/auth';
-import { parseRoute, routeKindFromPath } from '../lib/navigation';
+import { parseRoute, pathForPublicProfile, routeKindFromPath } from '../lib/navigation';
 import { LeaderboardPage } from './LeaderboardPage';
 import { LandingPage, type LandingAuthStatus } from './LandingPage';
 import { PublicProfilePage } from './PublicProfilePage';
@@ -23,6 +23,8 @@ const LOCAL_TOKEN_KEY = 'harness_analyzer_auth_token';
 interface HarnessAuthContextValue {
   session: AuthSession;
   logout: () => void;
+  ownHandle?: string | null;
+  updateOwnHandle: (handle: string) => void;
 }
 
 const HarnessAuthContext = createContext<HarnessAuthContextValue | null>(null);
@@ -64,12 +66,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<LandingAuthStatus>('checking');
   const [message, setMessage] = useState<string | null>(null);
   const [pathname, setPathname] = useState(() => window.location.pathname);
+  const [ownHandle, setOwnHandle] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     const syncPathname = () => setPathname(window.location.pathname);
     window.addEventListener('popstate', syncPathname);
     return () => window.removeEventListener('popstate', syncPathname);
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setOwnHandle(undefined);
+      return;
+    }
+    let cancelled = false;
+    publicApi.getSharing()
+      .then(settings => { if (!cancelled) setOwnHandle(settings.handle || null); })
+      .catch(() => { if (!cancelled) setOwnHandle(null); });
+    return () => { cancelled = true; };
+  }, [session?.user_id]);
+
+  useEffect(() => {
+    if (!session || !ownHandle) return;
+    const currentRoute = parseRoute(pathname);
+    if (currentRoute.kind !== 'app' || currentRoute.tab !== 'dashboard') return;
+    const canonicalPath = pathForPublicProfile(ownHandle);
+    window.history.replaceState(null, '', canonicalPath);
+    setPathname(canonicalPath);
+  }, [session?.user_id, ownHandle, pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,13 +194,32 @@ export function AuthGate({ children }: { children: ReactNode }) {
         message={message}
         onSignIn={signIn}
         onSignOut={logout}
+        ownHandle={ownHandle}
+        showPrivateNavigation={Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE)))}
       />
     );
   }
 
-  const publicAuth = { status, session, onSignIn: signIn };
+  const publicAuth = {
+    status,
+    session,
+    onSignIn: signIn,
+    ownHandle,
+    showPrivateNavigation: Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE))),
+  };
   if (route.kind === 'leaderboard') return <LeaderboardPage auth={publicAuth} />;
-  if (route.kind === 'public-profile') return <PublicProfilePage handle={route.handle} auth={publicAuth} />;
+  if (route.kind === 'public-profile') {
+    const canOpenOwnLocalDashboard = session
+      && ownHandle === route.handle
+      && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE));
+    if (session && ownHandle === undefined) {
+      return <PublicShell auth={publicAuth}><div className="min-h-[70dvh] animate-pulse border-2 border-[var(--line-strong)] bg-[var(--paper-deep)]" aria-label="Loading profile access" /></PublicShell>;
+    }
+    if (canOpenOwnLocalDashboard) {
+      return <HarnessAuthContext.Provider value={{ session, logout, ownHandle, updateOwnHandle: setOwnHandle }}>{children}</HarnessAuthContext.Provider>;
+    }
+    return <PublicProfilePage handle={route.handle} auth={publicAuth} />;
+  }
   if (route.kind === 'not-found') {
     return (
       <PublicShell auth={publicAuth}>
@@ -198,6 +241,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
         message={message}
         onSignIn={signIn}
         onSignOut={logout}
+        ownHandle={ownHandle}
+        showPrivateNavigation={Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE)))}
       />
     );
   }
@@ -216,7 +261,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   return (
-    <HarnessAuthContext.Provider value={{ session, logout }}>
+    <HarnessAuthContext.Provider value={{ session, logout, ownHandle, updateOwnHandle: setOwnHandle }}>
       {children}
     </HarnessAuthContext.Provider>
   );

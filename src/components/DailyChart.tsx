@@ -9,6 +9,7 @@ import {
   api,
   type DateRange,
   type HistoryBucket,
+  type HistoryChartResponse,
   type HistoryGroupBy,
   type HistoryTimeframe,
 } from '../lib/api';
@@ -155,14 +156,14 @@ function compact(entries: HistoryBucket[]): ChartBucket[] {
   return out;
 }
 
-export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRangeChange?: (range: DateRange) => void }) {
+export function DailyChart({ range, onRangeChange, history, readOnly = false }: { range?: DateRange; onRangeChange?: (range: DateRange) => void; history?: HistoryChartResponse; readOnly?: boolean }) {
   const [metric, setMetric] = useState<Metric>('usd');
   const [groupBy, setGroupBy] = useState<HistoryGroupBy>('harness');
   const [timeframe, setTimeframe] = useState<HistoryTimeframe>('1d');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const { data, loading } = useApi(
-    () => api.getHistory(timeframe, groupBy, 0),
-    [timeframe, groupBy],
+    () => history ? Promise.resolve(history) : api.getHistory(timeframe, groupBy, 0),
+    [history, timeframe, groupBy],
   );
 
   const chartRef = useRef<ChartJS<'bar', number[], string> | null>(null);
@@ -171,8 +172,8 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
   const [drag, setDrag] = useState<{ left: number; right: number; count: number; total: number } | null>(null);
 
   const buckets = useMemo(
-    () => data && data.timeframe === timeframe && data.groupBy === groupBy ? compact(data.buckets) : [],
-    [data, timeframe, groupBy],
+    () => data && (history || (data.timeframe === timeframe && data.groupBy === groupBy)) ? compact(data.buckets) : [],
+    [data, history, timeframe, groupBy],
   );
   const [viewport, setViewport] = useState<ChartViewport>({ start: 0, end: 0 });
   const preferredViewportSize = timeframe === '1d' ? 30 : 168;
@@ -377,7 +378,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Segmented options={METRIC_OPTIONS} value={metric} onChange={setMetric} ariaLabel="Metric" />
-        <Segmented
+        {!history && <Segmented
           options={GROUP_OPTIONS}
           value={groupBy}
           ariaLabel="Grouping"
@@ -385,13 +386,8 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
             setGroupBy(value);
             setHidden(new Set());
           }}
-        />
-        <Segmented
-          options={TIMEFRAME_OPTIONS}
-          value={timeframe}
-          onChange={setTimeframe}
-          ariaLabel="Timeframe"
-        />
+        />}
+        {!history && <Segmented options={TIMEFRAME_OPTIONS} value={timeframe} onChange={setTimeframe} ariaLabel="Timeframe" />}
 
         {series.map(name => {
           const off = hidden.has(name);
@@ -440,11 +436,11 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
         <div
           ref={wrapRef}
           className="relative mt-4 select-none border border-[#111111] bg-[#F4F4F0]"
-          style={{ height: 320, cursor: 'crosshair', touchAction: 'none' }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          style={{ height: 320, cursor: readOnly ? 'default' : 'crosshair', touchAction: readOnly ? 'auto' : 'none' }}
+          onPointerDown={readOnly ? undefined : onPointerDown}
+          onPointerMove={readOnly ? undefined : onPointerMove}
+          onPointerUp={readOnly ? undefined : onPointerUp}
+          onPointerCancel={readOnly ? undefined : onPointerCancel}
         >
           <Bar
             ref={chartRef}
@@ -550,7 +546,7 @@ export function DailyChart({ range, onRangeChange }: { range?: DateRange; onRang
       )}
 
       <p className="mt-4 border-t border-[#DEDDD7] pt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[#66645F]">
-        Drag the main chart to filter. Click it to reset. Drag or resize the navigator to change the visible window. Empty {timeframe === '1d' ? 'days' : 'hours'} are compacted.
+        {readOnly ? 'All-time published snapshot. Drag or resize the navigator to inspect the visible window.' : `Drag the main chart to filter. Click it to reset. Drag or resize the navigator to change the visible window. Empty ${timeframe === '1d' ? 'days' : 'hours'} are compacted.`}
       </p>
     </section>
   );
