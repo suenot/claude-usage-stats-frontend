@@ -116,6 +116,50 @@ export interface CacheStats {
   by_model: CacheModelRow[];
 }
 
+export type CacheExpiryTtl = '5m' | '1h';
+
+export interface CacheExpiryIncident {
+  timestamp: string;
+  source: string;
+  model: string;
+  session_id?: string;
+  title?: string;
+  project?: string;
+  idle_minutes: number;
+  ttl: CacheExpiryTtl;
+  estimated_tokens: number;
+  estimated_cost: number;
+  confidence: 'estimated';
+}
+
+export interface CacheExpiryBucket {
+  cost: number;
+  tokens: number;
+  incidents: number;
+}
+
+export interface CacheExpiryStats {
+  estimated_lost_cost: number;
+  estimated_expired_tokens: number;
+  incidents: number;
+  total_idle_minutes: number;
+  by_ttl: Record<CacheExpiryTtl, CacheExpiryBucket>;
+  by_model: Array<{
+    model: string;
+    cost: number;
+    tokens: number;
+    incidents: number;
+  }>;
+  top_incidents: CacheExpiryIncident[];
+  coverage: {
+    eligible_sessions: number;
+    excluded_sessions: number;
+    analyzed_events: number;
+    sources: string[];
+  };
+  methodology: 'heuristic-v1';
+}
+
 export interface ProjectBreakdownEntry {
   usd: number;
   tokens: number;
@@ -190,6 +234,7 @@ export const api = {
   getHeatmap: (range?: DateRange) => fetchJson<HeatmapEntry[]>(`/charts/heatmap${rangeQs(range)}`),
   getHourly: (range?: DateRange) => fetchJson<HourlyEntry[]>(`/charts/hourly${rangeQs(range)}`),
   getCache: (range?: DateRange) => fetchJson<CacheStats>(`/charts/cache${rangeQs(range)}`),
+  getCacheExpiry: (range?: DateRange) => fetchJson<CacheExpiryStats>(`/charts/cache-expiry${rangeQs(range)}`),
   getSources: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/sources${rangeQs(range)}`),
   getSourceUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),

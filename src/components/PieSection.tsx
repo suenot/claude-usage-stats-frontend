@@ -4,6 +4,7 @@ import { SourceChart } from './SourceChart';
 import { ModelChart } from './ModelChart';
 import { HourlyChart } from './HourlyChart';
 import { CacheChart } from './CacheChart';
+import { CacheExpiryChart } from './CacheExpiryChart';
 
 // Local (UTC+3 on this machine) "YYYY-MM-DDTHH:MM" - matches <input type="datetime-local">.
 // We format in local time (not toISOString, which is UTC).
@@ -112,7 +113,10 @@ export function PieSection({ range, setRange }: { range: DateRange; setRange: (r
 
       <HourlyChart range={range} />
 
-      <CacheChart range={range} />
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start">
+        <CacheExpiryChart range={range} />
+        <CacheChart range={range} />
+      </div>
     </div>
   );
 }
