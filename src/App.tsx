@@ -154,7 +154,7 @@ export default function App() {
 
       <footer className="mx-auto hidden max-w-[1440px] border-x border-t border-[var(--line-strong)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] lg:flex lg:items-center lg:justify-between">
         <span>Harness Analyzer</span>
-        <span>{summary ? `Generated ${summary.generated_at}` : 'Local telemetry'}</span>
+        <span>Made by marketmaker.cc</span>
       </footer>
     </div>
   );
