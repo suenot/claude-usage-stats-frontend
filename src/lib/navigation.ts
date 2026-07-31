@@ -1,12 +1,14 @@
-export const tabs = ['dashboard', 'sessions', 'projects', 'models'] as const;
+export const userTabs = ['dashboard', 'sessions', 'projects'] as const;
+export const tabs = [...userTabs, 'models'] as const;
 
 export type Tab = typeof tabs[number];
+export type UserTab = typeof userTabs[number];
 
 export type AppRoute =
   | { kind: 'landing' }
   | { kind: 'callback' }
   | { kind: 'leaderboard' }
-  | { kind: 'public-profile'; handle: string }
+  | { kind: 'public-profile'; handle: string; tab: UserTab }
   | { kind: 'profile' }
   | { kind: 'app'; tab: Tab }
   | { kind: 'not-found' };
@@ -43,11 +45,11 @@ export function parseRoute(pathname: string): AppRoute {
   if (path === '/users') return { kind: 'leaderboard' };
   if (path === '/profile') return { kind: 'profile' };
 
-  const publicMatch = path.match(/^\/u\/([^/]+)$/);
+  const publicMatch = path.match(/^\/u\/([^/]+)(?:\/(sessions|projects))?$/);
   if (publicMatch) {
     const handle = publicMatch[1].toLowerCase();
     return isValidPublicHandle(handle)
-      ? { kind: 'public-profile', handle }
+      ? { kind: 'public-profile', handle, tab: (publicMatch[2] as UserTab | undefined) ?? 'dashboard' }
       : { kind: 'not-found' };
   }
 
@@ -73,9 +75,27 @@ export function pathForPublicProfile(handle: string): string {
   return `/u/${encodeURIComponent(normalized)}`;
 }
 
+export function pathForUserTab(handle: string, tab: UserTab): string {
+  const profilePath = pathForPublicProfile(handle);
+  return tab === 'dashboard' ? profilePath : `${profilePath}/${tab}`;
+}
+
+export function canonicalUserPath(pathname: string, handle?: string | null): string | null {
+  const route = parseRoute(pathname);
+  if (route.kind === 'public-profile') {
+    const canonicalPath = pathForUserTab(route.handle, route.tab);
+    return pathname === canonicalPath ? null : canonicalPath;
+  }
+  return handle && route.kind === 'app' && route.tab !== 'models' ? pathForUserTab(handle, route.tab) : null;
+}
+
+export function isOwnUserHandle(routeHandle: string, ownHandle?: string | null): boolean {
+  return Boolean(ownHandle && routeHandle.toLowerCase() === ownHandle.toLowerCase());
+}
+
 export function tabFromPath(pathname: string): Tab {
   const route = parseRoute(pathname);
-  return route.kind === 'app' ? route.tab : 'dashboard';
+  return route.kind === 'app' || route.kind === 'public-profile' ? route.tab : 'dashboard';
 }
 
 export function shouldHandleSpaNavigation(event: {

@@ -20,7 +20,7 @@ export function LandingPage({ status, session, message, onSignIn, onSignOut, own
 
   return (
     <div className="min-h-[100dvh] bg-[var(--paper)] text-[var(--ink)]">
-      <SiteHeader session={session} publicOnly={!showPrivateNavigation} dashboardPath={ownHandle ? `/u/${encodeURIComponent(ownHandle)}` : '/dashboard'} authStatus={status} onSignIn={status === 'forbidden' ? onSignOut : onSignIn} />
+      <SiteHeader session={session} publicOnly={!showPrivateNavigation} userHandle={ownHandle} authStatus={status} onSignIn={status === 'forbidden' ? onSignOut : onSignIn} />
 
       {notice ? (
         <div role="status" className="border-b border-[var(--line-strong)] bg-[#F4E7E2] px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-5 tracking-[0.06em] text-[var(--signal)]">
@@ -103,7 +103,7 @@ export function LandingPage({ status, session, message, onSignIn, onSignOut, own
         </section>
       </main>
 
-      <footer className="mx-auto flex max-w-[1440px] flex-col gap-2 border border-[var(--line-strong)] px-5 py-5 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mx-auto mb-[calc(64px+env(safe-area-inset-bottom))] flex w-full max-w-[1440px] flex-col gap-2 border border-[var(--line-strong)] px-5 py-5 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between lg:mb-0">
         <span>Harness Analyzer</span>
         <a href="https://marketmaker.cc" className="hover:text-[var(--signal)]">MarketMaker</a>
       </footer>

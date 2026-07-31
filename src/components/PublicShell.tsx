@@ -17,7 +17,7 @@ export function PublicShell({ auth, children }: { auth: PublicAuthProps; childre
       <SiteHeader
         session={auth.session}
         publicOnly={!auth.showPrivateNavigation}
-        dashboardPath={auth.ownHandle ? `/u/${encodeURIComponent(auth.ownHandle)}` : '/dashboard'}
+        userHandle={auth.ownHandle}
         authStatus={auth.status}
         onSignIn={auth.onSignIn}
       />

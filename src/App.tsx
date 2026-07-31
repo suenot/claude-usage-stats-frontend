@@ -6,7 +6,7 @@ import { ProjectsTable } from './components/ProjectsTable';
 import { ModelPricingTable } from './components/ModelPricingTable';
 import { ProfilePage } from './components/ProfilePage';
 import { useHarnessAuth } from './components/AuthGate';
-import { parseRoute, pathForPublicProfile, pathForTab, shouldHandleSpaNavigation, type Tab } from './lib/navigation';
+import { parseRoute, pathForTab, pathForUserTab, shouldHandleSpaNavigation, type Tab, type UserTab } from './lib/navigation';
 import { SiteHeader } from './components/SiteHeader';
 import { UsageDashboard } from './components/UsageDashboard';
 
@@ -21,8 +21,8 @@ export default function App() {
   const { session: authSession, ownHandle } = useHarnessAuth();
   const [pathname, setPathname] = useState(() => typeof window === 'undefined' ? '/dashboard' : window.location.pathname);
   const route = parseRoute(pathname);
-  const tab: Tab = route.kind === 'app' ? route.tab : 'dashboard';
-  const needsSummary = (route.kind === 'app' && tab === 'dashboard') || route.kind === 'public-profile';
+  const tab: Tab = route.kind === 'app' || route.kind === 'public-profile' ? route.tab : 'dashboard';
+  const needsSummary = tab === 'dashboard' && (route.kind === 'app' || route.kind === 'public-profile');
   const { data: summary, loading, error: summaryError, refetch } = useApi<Summary | null>(
     () => needsSummary ? api.getSummary() : Promise.resolve(null),
     [needsSummary],
@@ -55,10 +55,10 @@ export default function App() {
     }
   };
 
-  const navigate = (event: MouseEvent<HTMLAnchorElement>, nextTab: Tab) => {
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, nextTab: UserTab) => {
     if (!shouldHandleSpaNavigation(event)) return;
     event.preventDefault();
-    const nextPath = nextTab === 'dashboard' && ownHandle ? pathForPublicProfile(ownHandle) : pathForTab(nextTab);
+    const nextPath = ownHandle ? pathForUserTab(ownHandle, nextTab) : pathForTab(nextTab);
     if (window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
@@ -66,18 +66,18 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--paper)] text-[var(--ink)]">
+    <div className="flex min-h-[100dvh] flex-col bg-[var(--paper)] text-[var(--ink)]">
       <SiteHeader
         session={authSession}
-        activeTab={route.kind === 'public-profile' ? 'dashboard' : tab}
-        dashboardPath={ownHandle ? pathForPublicProfile(ownHandle) : '/dashboard'}
+        activeTab={tab === 'models' ? undefined : tab}
+        userHandle={ownHandle}
         profileActive={route.kind === 'profile'}
         onNavigateTab={navigate}
         onRefresh={(route.kind === 'public-profile' || (route.kind === 'app' && tab !== 'models')) ? handleRefresh : undefined}
         refreshing={refreshing}
       />
 
-      <main className="mx-auto w-full min-w-0 max-w-[1440px] px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 md:px-6 md:pt-6 lg:pb-8">
+      <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-3 pb-4 pt-4 md:px-6 md:pb-6 md:pt-6 lg:pb-8">
         {route.kind === 'profile' ? (
           <ProfilePage />
         ) : tab === 'models' ? (
@@ -107,9 +107,9 @@ export default function App() {
         )}
       </main>
 
-      <footer className="mx-auto hidden max-w-[1440px] border-x border-t border-[var(--line-strong)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] lg:flex lg:items-center lg:justify-between">
+      <footer className="mx-auto mb-[calc(64px+env(safe-area-inset-bottom))] flex w-full max-w-[1440px] items-center justify-between border-x border-t border-[var(--line-strong)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)] lg:mb-0">
         <span>Harness Analyzer</span>
-        <span>Made by marketmaker.cc</span>
+        <span className="flex items-center gap-4"><a href="/models" aria-current={tab === 'models' ? 'page' : undefined} className="font-bold text-[var(--ink)] hover:text-[var(--signal)]">Models</a><span>Made by marketmaker.cc</span></span>
       </footer>
     </div>
   );

@@ -8,7 +8,7 @@ import {
   safeInternalPath,
   type AuthSession,
 } from '../lib/auth';
-import { parseRoute, pathForPublicProfile, routeKindFromPath } from '../lib/navigation';
+import { canonicalUserPath, isOwnUserHandle, isValidPublicHandle, parseRoute, pathForPublicProfile, routeKindFromPath } from '../lib/navigation';
 import { LeaderboardPage } from './LeaderboardPage';
 import { LandingPage, type LandingAuthStatus } from './LandingPage';
 import { PublicProfilePage } from './PublicProfilePage';
@@ -79,18 +79,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setOwnHandle(undefined);
       return;
     }
+    const identityHandle = isValidPublicHandle(session.username) ? session.username.toLowerCase() : null;
     let cancelled = false;
     publicApi.getSharing()
-      .then(settings => { if (!cancelled) setOwnHandle(settings.handle || null); })
-      .catch(() => { if (!cancelled) setOwnHandle(null); });
+      .then(settings => { if (!cancelled) setOwnHandle(settings.handle || identityHandle); })
+      .catch(() => { if (!cancelled) setOwnHandle(identityHandle); });
     return () => { cancelled = true; };
   }, [session?.user_id]);
 
   useEffect(() => {
-    if (!session || !ownHandle) return;
-    const currentRoute = parseRoute(pathname);
-    if (currentRoute.kind !== 'app' || currentRoute.tab !== 'dashboard') return;
-    const canonicalPath = pathForPublicProfile(ownHandle);
+    const canonicalPath = canonicalUserPath(pathname, ownHandle);
+    if (!canonicalPath) return;
     window.history.replaceState(null, '', canonicalPath);
     setPathname(canonicalPath);
   }, [session?.user_id, ownHandle, pathname]);
@@ -210,13 +209,25 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (route.kind === 'leaderboard') return <LeaderboardPage auth={publicAuth} />;
   if (route.kind === 'public-profile') {
     const canOpenOwnLocalDashboard = session
-      && ownHandle === route.handle
+      && isOwnUserHandle(route.handle, ownHandle)
       && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE));
-    if (session && ownHandle === undefined) {
+    if (status === 'checking' || (session && ownHandle === undefined)) {
       return <PublicShell auth={publicAuth}><div className="min-h-[70dvh] animate-pulse border-2 border-[var(--line-strong)] bg-[var(--paper-deep)]" aria-label="Loading profile access" /></PublicShell>;
     }
     if (canOpenOwnLocalDashboard) {
       return <HarnessAuthContext.Provider value={{ session, logout, ownHandle, updateOwnHandle: setOwnHandle }}>{children}</HarnessAuthContext.Provider>;
+    }
+    if (route.tab !== 'dashboard') {
+      return (
+        <PublicShell auth={publicAuth}>
+          <PublicState
+            eyebrow={`@${route.handle} / Private analytics`}
+            title="Private detail"
+            body="Sessions and projects are available only to the profile owner on the computer that stores the telemetry."
+            action={<a href={pathForPublicProfile(route.handle)} className="inline-flex min-h-11 items-center border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase">View public dashboard</a>}
+          />
+        </PublicShell>
+      );
     }
     return <PublicProfilePage handle={route.handle} auth={publicAuth} />;
   }
