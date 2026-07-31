@@ -1,7 +1,15 @@
-const BASE = '/api';
+const viteEnv = import.meta.env ?? {};
+const BASE = (viteEnv.VITE_API_URL || (viteEnv.PROD ? 'http://127.0.0.1:3001/api' : '/api')).replace(/\/$/, '');
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, init);
+  const headers = new Headers(init?.headers);
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }

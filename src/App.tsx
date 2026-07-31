@@ -8,6 +8,7 @@ import { Heatmap } from './components/Heatmap';
 import { SessionTable } from './components/SessionTable';
 import { ProjectsTable } from './components/ProjectsTable';
 import { ModelPricingTable } from './components/ModelPricingTable';
+import { useHarnessAuth } from './components/AuthGate';
 import { pathForTab, shouldHandleSpaNavigation, tabFromPath, tabs, type Tab } from './lib/navigation';
 
 const tabLabels: Record<Tab, string> = {
@@ -18,10 +19,11 @@ const tabLabels: Record<Tab, string> = {
 };
 
 export default function App() {
+  const { session: authSession, logout } = useHarnessAuth();
   const [tab, setTab] = useState<Tab>(() => (
     typeof window === 'undefined' ? 'dashboard' : tabFromPath(window.location.pathname)
   ));
-  const { data: summary, loading, refetch } = useApi(() => api.getSummary(), []);
+  const { data: summary, loading, error: summaryError, refetch } = useApi(() => api.getSummary(), []);
   const [refreshing, setRefreshing] = useState(false);
   const [dataRevision, setDataRevision] = useState(0);
   // Shared date range selected on the history chart and consumed by every
@@ -106,6 +108,9 @@ export default function App() {
           </nav>
 
           <div className="flex items-stretch">
+            <span className="hidden max-w-48 items-center truncate border-r border-[var(--line-strong)] px-4 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--muted)] xl:flex" title={authSession.email}>
+              {authSession.email}
+            </span>
             {tab !== 'models' && (
               <button
                 type="button"
@@ -116,6 +121,13 @@ export default function App() {
                 {refreshing ? 'Collecting' : 'Refresh data'}
               </button>
             )}
+            <button
+              type="button"
+              onClick={logout}
+              className="min-h-11 border-0 border-l border-[var(--line-strong)] bg-[var(--paper)] px-3 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)] md:px-4"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
@@ -127,6 +139,18 @@ export default function App() {
           <ProjectsTable refreshKey={dataRevision} />
         ) : tab === 'sessions' ? (
           <SessionTable key={dataRevision} />
+        ) : summaryError ? (
+          <div className="grid min-h-72 place-items-center border border-[var(--line-strong)] px-5 text-center">
+            <div className="max-w-lg">
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-[var(--signal)]">Local service unavailable</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                Start Harness Analyzer on this computer, then retry. Your telemetry stays local and is never uploaded to Vercel.
+              </p>
+              <button type="button" onClick={refetch} className="mt-5 min-h-11 bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase tracking-[0.1em] text-white hover:bg-[var(--ink)]">
+                Retry
+              </button>
+            </div>
+          </div>
         ) : loading || !summary ? (
           <div className="grid min-h-72 place-items-center border border-[var(--line-strong)] font-mono text-xs uppercase tracking-[0.1em] text-[var(--muted)]">
             Loading telemetry
