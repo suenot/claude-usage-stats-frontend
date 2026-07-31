@@ -59,6 +59,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [status, setStatus] = useState<LandingAuthStatus>('checking');
   const [message, setMessage] = useState<string | null>(null);
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const syncPathname = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', syncPathname);
+    return () => window.removeEventListener('popstate', syncPathname);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +96,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           const nextSession = await response.json() as AuthSession;
           if (cancelled) return;
           window.history.replaceState(null, '', returnPath);
+          setPathname(returnPath);
           acceptSession(nextSession);
           return;
         }
@@ -112,6 +120,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (routeKindFromPath(window.location.pathname) === 'callback') {
           window.history.replaceState(null, '', '/');
+          setPathname('/');
         }
         setAccessToken(null);
         setSession(null);
@@ -141,10 +150,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
       });
     } finally {
       window.history.pushState(null, '', '/');
+      setPathname('/');
     }
   };
 
-  const routeKind = routeKindFromPath(window.location.pathname);
+  const routeKind = routeKindFromPath(pathname);
   if (routeKind === 'callback' && status === 'checking') return <CallbackProgress />;
 
   if (routeKind === 'landing' || !session) {
