@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { useApi } from './hooks/useApi';
-import { api, type DateRange } from './lib/api';
+import { api, type DateRange, type Summary } from './lib/api';
 import { StatCards } from './components/StatCards';
 import { DailyChart } from './components/DailyChart';
 import { PieSection } from './components/PieSection';
@@ -8,8 +8,9 @@ import { Heatmap } from './components/Heatmap';
 import { SessionTable } from './components/SessionTable';
 import { ProjectsTable } from './components/ProjectsTable';
 import { ModelPricingTable } from './components/ModelPricingTable';
+import { ProfilePage } from './components/ProfilePage';
 import { useHarnessAuth } from './components/AuthGate';
-import { pathForTab, shouldHandleSpaNavigation, tabFromPath, tabs, type Tab } from './lib/navigation';
+import { parseRoute, pathForTab, shouldHandleSpaNavigation, tabs, type Tab } from './lib/navigation';
 
 const tabLabels: Record<Tab, string> = {
   dashboard: 'Dashboard',
@@ -19,11 +20,15 @@ const tabLabels: Record<Tab, string> = {
 };
 
 export default function App() {
-  const { session: authSession, logout } = useHarnessAuth();
-  const [tab, setTab] = useState<Tab>(() => (
-    typeof window === 'undefined' ? 'dashboard' : tabFromPath(window.location.pathname)
-  ));
-  const { data: summary, loading, error: summaryError, refetch } = useApi(() => api.getSummary(), []);
+  const { session: authSession } = useHarnessAuth();
+  const [pathname, setPathname] = useState(() => typeof window === 'undefined' ? '/dashboard' : window.location.pathname);
+  const route = parseRoute(pathname);
+  const tab: Tab = route.kind === 'app' ? route.tab : 'dashboard';
+  const needsSummary = route.kind === 'app' && tab === 'dashboard';
+  const { data: summary, loading, error: summaryError, refetch } = useApi<Summary | null>(
+    () => needsSummary ? api.getSummary() : Promise.resolve(null),
+    [needsSummary],
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [dataRevision, setDataRevision] = useState(0);
   // Shared date range selected on the history chart and consumed by every
@@ -32,12 +37,7 @@ export default function App() {
 
   useEffect(() => {
     const syncLocation = () => {
-      const nextTab = tabFromPath(window.location.pathname);
-      const canonicalPath = pathForTab(nextTab);
-      if (window.location.pathname !== canonicalPath) {
-        window.history.replaceState(null, '', canonicalPath);
-      }
-      setTab(nextTab);
+      setPathname(window.location.pathname);
     };
 
     syncLocation();
@@ -46,8 +46,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = `${tabLabels[tab]} | Harness Analyzer`;
-  }, [tab]);
+    document.title = `${route.kind === 'profile' ? 'Profile' : tabLabels[tab]} | Harness Analyzer`;
+  }, [route.kind, tab]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -67,7 +67,7 @@ export default function App() {
     if (window.location.pathname !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
-    setTab(nextTab);
+    setPathname(nextPath);
   };
 
   return (
@@ -92,7 +92,7 @@ export default function App() {
           </div>
 
           <nav aria-label="Primary navigation" className="app-nav">
-            <div className="grid h-full grid-cols-4 md:flex md:justify-end">
+            <div className="grid h-full grid-cols-5 md:flex md:justify-end">
               {tabs.map(t => (
                 <a
                   key={t}
@@ -104,6 +104,7 @@ export default function App() {
                   {tabLabels[t]}
                 </a>
               ))}
+              <a href="/users" className="app-nav-link">Users</a>
             </div>
           </nav>
 
@@ -111,7 +112,7 @@ export default function App() {
             <span className="hidden max-w-48 items-center truncate border-r border-[var(--line-strong)] px-4 font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--muted)] xl:flex" title={authSession.email}>
               {authSession.email}
             </span>
-            {tab !== 'models' && (
+            {route.kind === 'app' && tab !== 'models' && (
               <button
                 type="button"
                 onClick={handleRefresh}
@@ -121,19 +122,21 @@ export default function App() {
                 {refreshing ? 'Collecting' : 'Refresh data'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={logout}
-              className="min-h-11 border-0 border-l border-[var(--line-strong)] bg-[var(--paper)] px-3 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)] md:px-4"
+            <a
+              href="/profile"
+              aria-current={route.kind === 'profile' ? 'page' : undefined}
+              className="inline-flex min-h-11 items-center border-0 border-l border-[var(--line-strong)] bg-[var(--paper)] px-3 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)] md:px-4"
             >
-              Sign out
-            </button>
+              Profile
+            </a>
           </div>
         </div>
       </header>
 
       <main className="mx-auto w-full min-w-0 max-w-[1440px] px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 md:px-6 md:pt-6 lg:pb-8">
-        {tab === 'models' ? (
+        {route.kind === 'profile' ? (
+          <ProfilePage />
+        ) : tab === 'models' ? (
           <ModelPricingTable />
         ) : tab === 'projects' ? (
           <ProjectsTable refreshKey={dataRevision} />

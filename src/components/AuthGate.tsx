@@ -3,12 +3,16 @@ import { setAccessToken } from '../lib/api';
 import {
   createAuthorizeUrl,
   exchangeSsoCode,
+  hasPrivateAnalyticsAccess,
   hasServiceAccess,
   safeInternalPath,
   type AuthSession,
 } from '../lib/auth';
-import { routeKindFromPath } from '../lib/navigation';
+import { parseRoute, routeKindFromPath } from '../lib/navigation';
+import { LeaderboardPage } from './LeaderboardPage';
 import { LandingPage, type LandingAuthStatus } from './LandingPage';
+import { PublicProfilePage } from './PublicProfilePage';
+import { PublicShell, PublicState } from './PublicShell';
 
 const viteEnv = import.meta.env ?? {};
 const AUTH_API_URL = (viteEnv.VITE_AUTH_API_URL || 'https://auth.marketmaker.cc/api/v1').replace(/\/$/, '');
@@ -155,9 +159,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   };
 
   const routeKind = routeKindFromPath(pathname);
+  const route = parseRoute(pathname);
   if (routeKind === 'callback' && status === 'checking') return <CallbackProgress />;
 
-  if (routeKind === 'landing' || !session) {
+  if (route.kind === 'landing') {
     return (
       <LandingPage
         status={status}
@@ -166,6 +171,47 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onSignIn={signIn}
         onSignOut={logout}
       />
+    );
+  }
+
+  const publicAuth = { status, session, onSignIn: signIn };
+  if (route.kind === 'leaderboard') return <LeaderboardPage auth={publicAuth} />;
+  if (route.kind === 'public-profile') return <PublicProfilePage handle={route.handle} auth={publicAuth} />;
+  if (route.kind === 'not-found') {
+    return (
+      <PublicShell auth={publicAuth}>
+        <PublicState
+          eyebrow="Harness Analyzer / 404"
+          title="Page not found"
+          body="The requested page does not exist."
+          action={<a href="/" className="inline-flex min-h-11 items-center border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase">Go home</a>}
+        />
+      </PublicShell>
+    );
+  }
+
+  if (!session) {
+    return (
+      <LandingPage
+        status={status}
+        session={session}
+        message={message}
+        onSignIn={signIn}
+        onSignOut={logout}
+      />
+    );
+  }
+
+  if (route.kind === 'app' && !isLoopbackHost() && !hasPrivateAnalyticsAccess(session, AUTH_SERVICE)) {
+    return (
+      <PublicShell auth={publicAuth}>
+        <PublicState
+          eyebrow="Harness Analyzer / Local analytics"
+          title="Open locally"
+          body="Private telemetry is available only on the computer that stores it. You can manage sharing from your profile or browse public users here."
+          action={<div className="flex flex-wrap gap-2"><a href="/profile" className="inline-flex min-h-11 items-center bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase text-white">Profile</a><a href="/users" className="inline-flex min-h-11 items-center border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase">Users</a></div>}
+        />
+      </PublicShell>
     );
   }
 

@@ -1,17 +1,35 @@
 const viteEnv = import.meta.env ?? {};
 const BASE = (viteEnv.VITE_API_URL || (viteEnv.PROD ? 'http://127.0.0.1:3001/api' : '/api')).replace(/\/$/, '');
+const PUBLIC_BASE = (viteEnv.VITE_PUBLIC_API_URL || (
+  viteEnv.PROD ? BASE : 'https://harness-analyzer-api.marketmaker.cc/api'
+)).replace(/\/$/, '');
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+export class ApiError extends Error {
+  constructor(public readonly status: number, message?: string) {
+    super(message ? `${message} (${status})` : `API error: ${status}`);
+    this.name = 'ApiError';
+  }
+}
+
+async function fetchJsonAt<T>(base: string, path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
-  const res = await fetch(`${BASE}${path}`, { ...init, headers });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (init?.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const res = await fetch(`${base}${path}`, { ...init, headers });
+  if (!res.ok) {
+    const payload = await res.clone().json().catch(() => null) as { error?: string; message?: string } | null;
+    throw new ApiError(res.status, payload?.error || payload?.message);
+  }
   return res.json();
+}
+
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  return fetchJsonAt<T>(BASE, path, init);
 }
 
 export interface Summary {
@@ -217,6 +235,70 @@ export interface UsageBreakdownEntry {
 
 export type UsageBreakdown = Record<string, UsageBreakdownEntry>;
 
+export type SharingVisibility = 'private' | 'totals' | 'details';
+
+export interface SharingSettings {
+  handle: string;
+  display_name: string;
+  visibility: SharingVisibility;
+  leaderboard_opt_in: boolean;
+  snapshot_generated_at: string | null;
+}
+
+export interface PublicSnapshotTotals {
+  total_cost: number;
+  total_tokens: number;
+  total_sessions: number;
+  active_days: number;
+  active_months: number;
+  today_cost: number;
+  week_cost: number;
+  month_cost: number;
+  avg_per_active_day: number;
+  avg_per_active_month: number;
+  median_per_active_day: number;
+  median_per_active_month: number;
+}
+
+export interface PublicSnapshotDetails {
+  history: HistoryChartResponse;
+  by_harness: UsageBreakdown;
+  by_model: UsageBreakdown;
+  hourly: HourlyEntry[];
+  heatmap?: HeatmapEntry[];
+  cache?: CacheStats;
+  cache_expiry?: Omit<CacheExpiryStats, 'top_incidents'>;
+}
+
+export interface PublicSnapshotV1 {
+  schema_version: 1;
+  generated_at: string;
+  totals: PublicSnapshotTotals;
+  details?: PublicSnapshotDetails;
+}
+
+export interface PublicUserProfile {
+  handle: string;
+  display_name: string;
+  visibility: Exclude<SharingVisibility, 'private'>;
+  snapshot: PublicSnapshotV1;
+}
+
+export type LeaderboardMetric = 'tokens' | 'cost' | 'sessions';
+
+export interface LeaderboardUser {
+  rank: number;
+  handle: string;
+  display_name: string;
+  value: number;
+  generated_at: string;
+}
+
+export interface LeaderboardResponse {
+  metric: LeaderboardMetric;
+  users: LeaderboardUser[];
+}
+
 function rangeQs(range?: DateRange): string {
   if (!range) return '';
   const p = new URLSearchParams();
@@ -249,4 +331,30 @@ export const api = {
   getModelUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/model-usage${rangeQs(range)}`),
   getModelPricing: (force = false) => fetchJson<ModelPricingResponse>(`/models/pricing${force ? '?refresh=1' : ''}`),
   collectData: () => fetchJson<{ message: string; sessions: number }>('/collect', { method: 'POST' }),
+  exportPublicSnapshot: (level: Exclude<SharingVisibility, 'private'>) => (
+    fetchJson<PublicSnapshotV1>(`/me/public-snapshot-source?level=${level}`)
+  ),
+};
+
+export const publicApi = {
+  getSharing: () => fetchJsonAt<SharingSettings>(PUBLIC_BASE, '/me/sharing'),
+  updateSharing: (settings: Partial<Pick<SharingSettings, 'handle' | 'display_name' | 'visibility' | 'leaderboard_opt_in'>>) => (
+    fetchJsonAt<SharingSettings>(PUBLIC_BASE, '/me/sharing', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    })
+  ),
+  publishSnapshot: (snapshot: PublicSnapshotV1) => (
+    fetchJsonAt<{ ok: true; generated_at: string }>(PUBLIC_BASE, '/me/public-snapshot', {
+      method: 'PUT',
+      body: JSON.stringify(snapshot),
+    })
+  ),
+  getUser: (handle: string) => (
+    fetchJsonAt<PublicUserProfile>(PUBLIC_BASE, `/public/users/${encodeURIComponent(handle)}`)
+  ),
+  getLeaderboard: (metric: LeaderboardMetric, limit = 50) => {
+    const qs = new URLSearchParams({ metric, limit: String(limit) });
+    return fetchJsonAt<LeaderboardResponse>(PUBLIC_BASE, `/public/leaderboard?${qs}`);
+  },
 };

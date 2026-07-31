@@ -27,6 +27,10 @@ export function exchangeSsoCode(
 }
 
 export function hasServiceAccess(session: AuthSession, service: string): boolean {
+  return ['user', 'superuser', 'admin'].includes(session.services?.[service]);
+}
+
+export function hasPrivateAnalyticsAccess(session: AuthSession, service: string): boolean {
   return session.services?.[service] === 'admin';
 }
 

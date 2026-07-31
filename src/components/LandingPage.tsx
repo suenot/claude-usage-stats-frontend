@@ -44,6 +44,7 @@ export function LandingPage({ status, session, message, onSignIn, onSignOut }: L
 
           <div className="flex items-stretch">
             <nav aria-label="Landing navigation" className="hidden items-stretch md:flex">
+              <a href="/users" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Users</a>
               <a href="#capabilities" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Capabilities</a>
               <a href="#method" className="inline-flex items-center border-l border-[var(--line-strong)] px-5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)] hover:bg-[var(--ink)] hover:text-[var(--paper)]">Method</a>
             </nav>

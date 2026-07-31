@@ -5,6 +5,7 @@ import {
   createAuthorizeUrl,
   createLoginUrl,
   exchangeSsoCode,
+  hasPrivateAnalyticsAccess,
   hasServiceAccess,
   safeInternalPath,
 } from '../src/lib/auth';
@@ -34,7 +35,7 @@ test('builds authorize and login URLs without open redirects', () => {
   assert.equal(login.href, 'https://auth.marketmaker.cc/login?return=http%3A%2F%2F127.0.0.1%3A5173%2F');
 });
 
-test('requires an explicit admin role for Harness Analyzer', () => {
+test('accepts service users but keeps private analytics admin-only', () => {
   const base = {
     token: 'token',
     user_id: 'user-1',
@@ -43,7 +44,11 @@ test('requires an explicit admin role for Harness Analyzer', () => {
   };
 
   assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'admin' } }, 'harness-analyzer'), true);
-  assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'viewer' } }, 'harness-analyzer'), false);
+  assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'superuser' } }, 'harness-analyzer'), true);
+  assert.equal(hasServiceAccess({ ...base, services: { 'harness-analyzer': 'user' } }, 'harness-analyzer'), true);
+  assert.equal(hasPrivateAnalyticsAccess({ ...base, services: { 'harness-analyzer': 'admin' } }, 'harness-analyzer'), true);
+  assert.equal(hasPrivateAnalyticsAccess({ ...base, services: { 'harness-analyzer': 'superuser' } }, 'harness-analyzer'), false);
+  assert.equal(hasPrivateAnalyticsAccess({ ...base, services: { 'harness-analyzer': 'user' } }, 'harness-analyzer'), false);
   assert.equal(hasServiceAccess({ ...base, services: {} }, 'harness-analyzer'), false);
 });
 

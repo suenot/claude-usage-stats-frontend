@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { api } from '../src/lib/api.ts';
+import { api, ApiError, publicApi } from '../src/lib/api.ts';
 
 test('collects data through the backend POST endpoint', async () => {
   const originalFetch = globalThis.fetch;
@@ -18,6 +18,40 @@ test('collects data through the backend POST endpoint', async () => {
     assert.equal(request?.input, '/api/collect');
     assert.equal(request?.init?.method, 'POST');
     assert.deepEqual(result, { message: 'Data refreshed', sessions: 3 });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('uses the central public registry and encodes handles and leaderboard options', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<string | URL | Request> = [];
+  globalThis.fetch = async input => {
+    requests.push(input);
+    return Response.json(input.toString().includes('leaderboard')
+      ? { metric: 'tokens', users: [] }
+      : { handle: 'mark-1', display_name: 'Mark', visibility: 'totals', snapshot: {} });
+  };
+  try {
+    await publicApi.getUser('mark-1');
+    await publicApi.getLeaderboard('tokens', 25);
+    assert.deepEqual(requests, [
+      'https://harness-analyzer-api.marketmaker.cc/api/public/users/mark-1',
+      'https://harness-analyzer-api.marketmaker.cc/api/public/leaderboard?metric=tokens&limit=25',
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('preserves backend error details and status', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ error: 'Handle is already reserved' }, { status: 409 });
+  try {
+    await assert.rejects(
+      () => publicApi.updateSharing({ handle: 'taken' }),
+      error => error instanceof ApiError && error.status === 409 && error.message.includes('Handle is already reserved'),
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
