@@ -173,7 +173,7 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
         </header>
 
         <section aria-labelledby="projects-heading" className="grid border-b border-[#1B1B1B] lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
-          <div className="min-w-0 py-5 lg:border-r lg:border-[#1B1B1B] lg:pr-6 lg:py-7">
+          <div className="min-w-0 py-5 lg:pr-6 lg:py-7">
             <p className="max-w-xl text-sm leading-6 text-[#66645F]">Cost, token volume, model mix and harness mix for every recorded working directory.</p>
             <dl className="mt-6 grid grid-cols-2 border-l border-t border-[#1B1B1B] sm:grid-cols-4">
               <div className="min-w-0 border-b border-r border-[#1B1B1B] p-3">
@@ -194,12 +194,11 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
               </div>
             </dl>
           </div>
-          <div className="min-w-0 py-5 lg:py-7 lg:pl-6">
+          <div className="min-w-0 py-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-[#1B1B1B] lg:py-7 lg:pl-6">
             <ProjectChart data={data} loading={loading} />
           </div>
-        </section>
 
-        <section aria-labelledby="project-browser-heading" className="pt-6 sm:pt-8">
+          <section aria-labelledby="project-browser-heading" className="pt-6 sm:pt-8 lg:col-start-1 lg:row-start-2 lg:border-t lg:border-[#1B1B1B] lg:pt-6">
           <div className="border-y-[3px] border-[#111111] py-3 sm:flex sm:items-end sm:justify-between sm:gap-6">
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BC1010]">Directory index</p>
@@ -264,6 +263,7 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
               </div>
             )}
           </div>
+        </section>
         </section>
       </div>
     </div>
