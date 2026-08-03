@@ -1,10 +1,10 @@
 const viteEnv = import.meta.env ?? {};
 const LOOPBACK_API = 'http://127.0.0.1:3001/api';
 const browserIsLoopback = typeof window === 'undefined' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const BASE = (browserIsLoopback ? (viteEnv.VITE_API_URL || '/api') : LOOPBACK_API).replace(/\/$/, '');
-const PUBLIC_BASE = (viteEnv.VITE_PUBLIC_API_URL || (
-  viteEnv.PROD ? BASE : 'https://harness-analyzer-api.marketmaker.cc/api'
-)).replace(/\/$/, '');
+const HOSTED_API = (viteEnv.VITE_PUBLIC_API_URL || 'https://harness-analyzer-api.marketmaker.cc/api').replace(/\/$/, '');
+const BASE = (browserIsLoopback ? (viteEnv.VITE_API_URL || '/api') : HOSTED_API).replace(/\/$/, '');
+const PUBLIC_BASE = HOSTED_API;
+const ANALYTICS_PREFIX = browserIsLoopback ? '' : '/me/analytics';
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
@@ -31,7 +31,7 @@ async function fetchJsonAt<T>(base: string, path: string, init?: RequestInit): P
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  return fetchJsonAt<T>(BASE, path, init);
+  return fetchJsonAt<T>(BASE, `${ANALYTICS_PREFIX}${path}`, init);
 }
 
 export interface Summary {
@@ -331,10 +331,12 @@ export const api = {
   getSourceUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/source-usage${rangeQs(range)}`),
   getModels: (range?: DateRange) => fetchJson<Record<string, number>>(`/charts/models${rangeQs(range)}`),
   getModelUsage: (range?: DateRange) => fetchJson<UsageBreakdown>(`/charts/model-usage${rangeQs(range)}`),
-  getModelPricing: (force = false) => fetchJson<ModelPricingResponse>(`/models/pricing${force ? '?refresh=1' : ''}`),
-  collectData: () => fetchJson<{ message: string; sessions: number }>('/collect', { method: 'POST' }),
+  getModelPricing: (force = false) => fetchJsonAt<ModelPricingResponse>(BASE, `/models/pricing${force ? '?refresh=1' : ''}`),
+  collectData: () => browserIsLoopback
+    ? fetchJsonAt<{ message: string; sessions: number }>(BASE, '/collect', { method: 'POST' })
+    : Promise.reject(new ApiError(400, 'Sync from this Mac with harness-analyzer sync')),
   exportPublicSnapshot: (level: Exclude<SharingVisibility, 'private'>) => (
-    fetchJson<PublicSnapshotV1>(`/me/public-snapshot-source?level=${level}`)
+    fetchJsonAt<PublicSnapshotV1>(BASE, `/me/public-snapshot-source?level=${level}`)
   ),
 };
 

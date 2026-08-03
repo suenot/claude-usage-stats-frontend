@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '../hooks/useApi';
-import { api, ApiError, publicApi, type SharingSettings, type SharingVisibility } from '../lib/api';
+import { ApiError, publicApi, type SharingSettings, type SharingVisibility } from '../lib/api';
 import { isValidPublicHandle } from '../lib/navigation';
-import { saveSharingSettings, SharingPublicationError, type PublicationStage } from '../lib/sharing';
 import { useHarnessAuth } from './AuthGate';
 
 const OPTIONS: Array<{ value: SharingVisibility; title: string; body: string }> = [
@@ -10,14 +9,6 @@ const OPTIONS: Array<{ value: SharingVisibility; title: string; body: string }> 
   { value: 'totals', title: 'Totals only', body: 'Share total cost, tokens, sessions and activity counts.' },
   { value: 'details', title: 'Totals + details', body: 'Also share aggregate daily, model, harness and hourly charts.' },
 ];
-
-function exporterMessage(error: unknown, stage: PublicationStage): string {
-  if (error instanceof ApiError && stage === 'reserve') return error.message || 'This public handle is unavailable.';
-  if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-    return 'The local snapshot exporter is unavailable. Open Harness Analyzer on the computer that contains your telemetry and enable snapshot export, then try again. Your profile remains private.';
-  }
-  return `${error instanceof Error && error.message ? error.message : 'Your public snapshot could not be updated.'} Your profile remains private.`;
-}
 
 export function ProfilePage() {
   const { session, logout, updateOwnHandle } = useHarnessAuth();
@@ -50,24 +41,17 @@ export function ProfilePage() {
     setSaveError(null);
     setSaved(false);
     try {
-      const next = await saveSharingSettings({ ...form, handle: normalizedHandle }, {
-        updateSharing: publicApi.updateSharing,
-        exportSnapshot: api.exportPublicSnapshot,
-        publishSnapshot: publicApi.publishSnapshot,
+      const next = await publicApi.updateSharing({
+        handle: normalizedHandle,
+        visibility: form.visibility,
+        leaderboard_opt_in: form.visibility === 'private' ? false : form.leaderboard_opt_in,
       });
       setForm(next);
       setPersisted(next);
       updateOwnHandle(next.handle);
       setSaved(true);
     } catch (cause) {
-      if (cause instanceof SharingPublicationError && cause.safeSettings) {
-        setForm(cause.safeSettings);
-        setPersisted(cause.safeSettings);
-        updateOwnHandle(cause.safeSettings.handle);
-      }
-      setSaveError(form.visibility === 'private'
-        ? (cause instanceof Error && cause.message ? cause.message : 'Sharing settings could not be saved.')
-        : exporterMessage(cause instanceof SharingPublicationError ? cause.cause : cause, cause instanceof SharingPublicationError ? cause.stage : 'reserve'));
+      setSaveError(cause instanceof Error && cause.message ? cause.message : 'Sharing settings could not be saved.');
     } finally {
       setSaving(false);
     }

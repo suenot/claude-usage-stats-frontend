@@ -29,6 +29,7 @@ export default function App() {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [dataRevision, setDataRevision] = useState(0);
+  const isLocal = typeof window === 'undefined' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
   useEffect(() => {
     const syncLocation = () => {
@@ -73,7 +74,7 @@ export default function App() {
         userHandle={ownHandle}
         profileActive={route.kind === 'profile'}
         onNavigateTab={navigate}
-        onRefresh={(route.kind === 'public-profile' || (route.kind === 'app' && tab !== 'models')) ? handleRefresh : undefined}
+        onRefresh={isLocal && (route.kind === 'public-profile' || (route.kind === 'app' && tab !== 'models')) ? handleRefresh : undefined}
         refreshing={refreshing}
       />
 
@@ -89,9 +90,9 @@ export default function App() {
         ) : summaryError ? (
           <div className="grid min-h-72 place-items-center border border-[var(--line-strong)] px-5 text-center">
             <div className="max-w-lg">
-              <p className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-[var(--signal)]">Local service unavailable</p>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-[var(--signal)]">Analytics unavailable</p>
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                Start Harness Analyzer on this computer, then retry. Your telemetry stays local and is never uploaded to Vercel.
+                {isLocal ? 'Start Harness Analyzer on this computer, then retry.' : 'Run "harness-analyzer sync" on your Mac, then retry. Your private analytics are stored on the server only for your signed-in account.'}
               </p>
               <button type="button" onClick={refetch} className="mt-5 min-h-11 bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase tracking-[0.1em] text-white hover:bg-[var(--ink)]">
                 Retry

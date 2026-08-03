@@ -208,13 +208,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   };
   if (route.kind === 'leaderboard') return <LeaderboardPage auth={publicAuth} />;
   if (route.kind === 'public-profile') {
-    const canOpenOwnLocalDashboard = session
-      && isOwnUserHandle(route.handle, ownHandle)
-      && isLoopbackHost();
+    const canOpenOwnDashboard = session && isOwnUserHandle(route.handle, ownHandle);
     if (status === 'checking' || (session && ownHandle === undefined)) {
       return <PublicShell auth={publicAuth}><div className="min-h-[70dvh] animate-pulse border-2 border-[var(--line-strong)] bg-[var(--paper-deep)]" aria-label="Loading profile access" /></PublicShell>;
     }
-    if (canOpenOwnLocalDashboard) {
+    if (canOpenOwnDashboard) {
       return <HarnessAuthContext.Provider value={{ session, logout, ownHandle, updateOwnHandle: setOwnHandle }}>{children}</HarnessAuthContext.Provider>;
     }
     if (route.tab !== 'dashboard') {
@@ -255,19 +253,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
         ownHandle={ownHandle}
         showPrivateNavigation={Boolean(session && isLoopbackHost())}
       />
-    );
-  }
-
-  if (route.kind === 'app' && !isLoopbackHost()) {
-    return (
-      <PublicShell auth={publicAuth}>
-        <PublicState
-          eyebrow="Harness Analyzer / Local analytics"
-          title="Open locally"
-          body="Private telemetry is available only on the computer that stores it. You can manage sharing from your profile or browse public users here."
-          action={<div className="flex flex-wrap gap-2"><a href="/profile" className="inline-flex min-h-11 items-center bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase text-white">Profile</a><a href="/users" className="inline-flex min-h-11 items-center border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase">Users</a></div>}
-        />
-      </PublicShell>
     );
   }
 
