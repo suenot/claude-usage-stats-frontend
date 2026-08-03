@@ -44,6 +44,25 @@ test('uses the central public registry and encodes handles and leaderboard optio
   }
 });
 
+test('creates and revokes scoped CLI tokens through the public registry', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ input: string | URL | Request; method?: string }> = [];
+  globalThis.fetch = async (input, init) => {
+    requests.push({ input, method: init?.method });
+    return Response.json(init?.method === 'POST' ? { token: `ha_sync_${'a'.repeat(43)}` } : { ok: true });
+  };
+  try {
+    await publicApi.createSyncToken();
+    await publicApi.revokeSyncToken();
+    assert.deepEqual(requests, [
+      { input: 'https://harness-analyzer-api.marketmaker.cc/api/me/sync-token', method: 'POST' },
+      { input: 'https://harness-analyzer-api.marketmaker.cc/api/me/sync-token', method: 'DELETE' },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('preserves backend error details and status', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ error: 'Handle is already reserved' }, { status: 409 });

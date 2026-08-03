@@ -34,6 +34,10 @@ export function hasPrivateAnalyticsAccess(session: AuthSession, service: string)
   return session.services?.[service] === 'admin';
 }
 
+export function isLoopbackHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
 export function safeInternalPath(value: string | null | undefined, fallback = '/dashboard'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return fallback;
   return value;

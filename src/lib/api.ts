@@ -1,5 +1,7 @@
 const viteEnv = import.meta.env ?? {};
-const BASE = (viteEnv.VITE_API_URL || (viteEnv.PROD ? 'http://127.0.0.1:3001/api' : '/api')).replace(/\/$/, '');
+const LOOPBACK_API = 'http://127.0.0.1:3001/api';
+const browserIsLoopback = typeof window === 'undefined' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const BASE = (browserIsLoopback ? (viteEnv.VITE_API_URL || '/api') : LOOPBACK_API).replace(/\/$/, '');
 const PUBLIC_BASE = (viteEnv.VITE_PUBLIC_API_URL || (
   viteEnv.PROD ? BASE : 'https://harness-analyzer-api.marketmaker.cc/api'
 )).replace(/\/$/, '');
@@ -349,6 +351,12 @@ export const publicApi = {
       method: 'PUT',
       body: JSON.stringify(snapshot),
     })
+  ),
+  createSyncToken: () => (
+    fetchJsonAt<{ token: string }>(PUBLIC_BASE, '/me/sync-token', { method: 'POST' })
+  ),
+  revokeSyncToken: () => (
+    fetchJsonAt<{ ok: true }>(PUBLIC_BASE, '/me/sync-token', { method: 'DELETE' })
   ),
   getUser: (handle: string) => (
     fetchJsonAt<PublicUserProfile>(PUBLIC_BASE, `/public/users/${encodeURIComponent(handle)}`)

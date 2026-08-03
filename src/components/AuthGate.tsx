@@ -3,8 +3,8 @@ import { publicApi, setAccessToken } from '../lib/api';
 import {
   createAuthorizeUrl,
   exchangeSsoCode,
-  hasPrivateAnalyticsAccess,
   hasServiceAccess,
+  isLoopbackHostname,
   safeInternalPath,
   type AuthSession,
 } from '../lib/auth';
@@ -30,7 +30,7 @@ interface HarnessAuthContextValue {
 const HarnessAuthContext = createContext<HarnessAuthContextValue | null>(null);
 
 function isLoopbackHost(): boolean {
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLoopbackHostname(window.location.hostname);
 }
 
 function callbackUrl(): string {
@@ -194,7 +194,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onSignIn={signIn}
         onSignOut={logout}
         ownHandle={ownHandle}
-        showPrivateNavigation={Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE)))}
+        showPrivateNavigation={Boolean(session && isLoopbackHost())}
       />
     );
   }
@@ -204,13 +204,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
     session,
     onSignIn: signIn,
     ownHandle,
-    showPrivateNavigation: Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE))),
+    showPrivateNavigation: Boolean(session && isLoopbackHost()),
   };
   if (route.kind === 'leaderboard') return <LeaderboardPage auth={publicAuth} />;
   if (route.kind === 'public-profile') {
     const canOpenOwnLocalDashboard = session
       && isOwnUserHandle(route.handle, ownHandle)
-      && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE));
+      && isLoopbackHost();
     if (status === 'checking' || (session && ownHandle === undefined)) {
       return <PublicShell auth={publicAuth}><div className="min-h-[70dvh] animate-pulse border-2 border-[var(--line-strong)] bg-[var(--paper-deep)]" aria-label="Loading profile access" /></PublicShell>;
     }
@@ -253,12 +253,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onSignIn={signIn}
         onSignOut={logout}
         ownHandle={ownHandle}
-        showPrivateNavigation={Boolean(session && (isLoopbackHost() || hasPrivateAnalyticsAccess(session, AUTH_SERVICE)))}
+        showPrivateNavigation={Boolean(session && isLoopbackHost())}
       />
     );
   }
 
-  if (route.kind === 'app' && !isLoopbackHost() && !hasPrivateAnalyticsAccess(session, AUTH_SERVICE)) {
+  if (route.kind === 'app' && !isLoopbackHost()) {
     return (
       <PublicShell auth={publicAuth}>
         <PublicState

@@ -7,6 +7,7 @@ import {
   exchangeSsoCode,
   hasPrivateAnalyticsAccess,
   hasServiceAccess,
+  isLoopbackHostname,
   safeInternalPath,
 } from '../src/lib/auth';
 
@@ -50,6 +51,12 @@ test('accepts service users but keeps private analytics admin-only', () => {
   assert.equal(hasPrivateAnalyticsAccess({ ...base, services: { 'harness-analyzer': 'superuser' } }, 'harness-analyzer'), false);
   assert.equal(hasPrivateAnalyticsAccess({ ...base, services: { 'harness-analyzer': 'user' } }, 'harness-analyzer'), false);
   assert.equal(hasServiceAccess({ ...base, services: {} }, 'harness-analyzer'), false);
+});
+
+test('private analytics only open on the local collector host', () => {
+  assert.equal(isLoopbackHostname('127.0.0.1'), true);
+  assert.equal(isLoopbackHostname('localhost'), true);
+  assert.equal(isLoopbackHostname('harness-analyzer.marketmaker.cc'), false);
 });
 
 test('deduplicates a one-time SSO code exchange under Strict Mode', async () => {

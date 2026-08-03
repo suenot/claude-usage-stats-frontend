@@ -28,6 +28,9 @@ export function ProfilePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [syncToken, setSyncToken] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
 
   useEffect(() => { document.title = 'Profile | Harness Analyzer'; }, []);
   useEffect(() => { if (data) { setForm(data); setPersisted(data); } }, [data]);
@@ -80,6 +83,44 @@ export function ProfilePage() {
     }
   };
 
+  const createSyncToken = async () => {
+    setSyncBusy(true);
+    setSyncStatus(null);
+    try {
+      const result = await publicApi.createSyncToken();
+      setSyncToken(result.token);
+      setSyncStatus('New token created. Any previous CLI token is now invalid.');
+    } catch (cause) {
+      setSyncStatus(cause instanceof Error ? cause.message : 'Token creation failed.');
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
+  const copySyncToken = async () => {
+    if (!syncToken) return;
+    try {
+      await navigator.clipboard.writeText(syncToken);
+      setSyncStatus('Token copied. Run "harness-analyzer login" and paste it.');
+    } catch {
+      setSyncStatus('Copy failed. Select the token and copy it manually.');
+    }
+  };
+
+  const revokeSyncToken = async () => {
+    setSyncBusy(true);
+    setSyncStatus(null);
+    try {
+      await publicApi.revokeSyncToken();
+      setSyncToken(null);
+      setSyncStatus('CLI access revoked.');
+    } catch (cause) {
+      setSyncStatus(cause instanceof Error ? cause.message : 'Token revocation failed.');
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
   if (loading && !form) return <div className="min-h-96 animate-pulse border-2 border-[var(--line-strong)] bg-[var(--paper-deep)]" aria-label="Loading profile settings" />;
   if (error || !form) return <section className="grid min-h-96 place-items-center border-2 border-[var(--line-strong)] p-5 text-center"><div><p className="font-mono text-xs font-bold uppercase text-[var(--signal)]">Profile unavailable</p><button type="button" onClick={refetch} className="mt-5 min-h-11 bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase text-white">Retry</button></div></section>;
 
@@ -121,6 +162,19 @@ export function ProfilePage() {
           <div aria-live="polite" className="min-h-5 text-xs leading-5">{saveError ? <span className="text-[var(--signal)]">{saveError}</span> : saved ? <span>Sharing settings saved.</span> : form.snapshot_generated_at ? <span className="text-[var(--muted)]">Last snapshot {new Date(form.snapshot_generated_at).toLocaleString()}</span> : null}</div>
           <button type="button" onClick={save} disabled={!canSave || saving} className="min-h-12 bg-[var(--signal)] px-6 font-mono text-xs font-bold uppercase tracking-[0.1em] text-white hover:bg-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-40">{saving ? 'Publishing' : form.visibility === 'private' ? 'Save privacy' : persisted?.visibility === 'private' ? 'Publish snapshot' : 'Update snapshot'}</button>
         </footer>
+      </section>
+      <section className="border-2 border-[var(--line-strong)] p-4 sm:p-6">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">CLI sync</p>
+        <h3 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em]">Update from this Mac</h3>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">The hosted site cannot read local Claude or Codex files. Install the CLI, connect it once, then run <code className="font-mono font-bold text-[var(--ink)]">harness-analyzer sync</code>. Only aggregate statistics are uploaded.</p>
+        <div className="mt-4 border border-[var(--line-strong)] bg-[var(--paper-deep)] p-3 font-mono text-xs leading-6"><div>npm install -g harness-analyzer</div><div>harness-analyzer login</div><div>harness-analyzer sync</div></div>
+        {syncToken ? <div className="mt-4"><label htmlFor="sync-token" className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Shown once</label><input id="sync-token" readOnly value={syncToken} className="mt-2 min-h-11 w-full border-2 border-[var(--line-strong)] bg-[var(--paper)] px-3 font-mono text-xs" /></div> : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" onClick={createSyncToken} disabled={syncBusy} className="min-h-11 bg-[var(--signal)] px-4 font-mono text-xs font-bold uppercase text-white disabled:opacity-50">{syncToken ? 'Replace token' : 'Create token'}</button>
+          {syncToken ? <button type="button" onClick={copySyncToken} className="min-h-11 border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase">Copy token</button> : null}
+          <button type="button" onClick={revokeSyncToken} disabled={syncBusy} className="min-h-11 border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase disabled:opacity-50">Revoke CLI access</button>
+        </div>
+        <p aria-live="polite" className="mt-3 min-h-5 text-xs text-[var(--muted)]">{syncStatus}</p>
       </section>
       <section className="flex flex-wrap items-center justify-between gap-3 border-2 border-[var(--line-strong)] p-4"><div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Account</p><p className="mt-1 text-sm">Signed in as {session.email}</p></div><button type="button" onClick={logout} className="min-h-11 border-2 border-[var(--line-strong)] px-4 font-mono text-xs font-bold uppercase hover:bg-[var(--ink)] hover:text-[var(--paper)]">Sign out</button></section>
     </div>
