@@ -63,8 +63,8 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
       {slices.length === 0 ? (
         <p className="p-4 font-mono text-xs text-[#66645F]">No project usage for this metric.</p>
       ) : (
-        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1fr)_12rem]">
-          <div className="h-64 min-w-0 border-b border-[#1B1B1B] p-4 lg:h-auto lg:min-h-72 lg:border-b-0 lg:border-r">
+        <div className="min-w-0">
+          <div className="h-64 min-w-0 border-b border-[#1B1B1B] p-4">
             <Doughnut
               data={{ labels: slices.map(slice => slice.label), datasets: [{ data: slices.map(slice => slice.value), backgroundColor: slices.map((_, index) => CHART_COLORS[index]), borderColor: PAPER, borderWidth: 2 }] }}
               options={{
@@ -92,10 +92,12 @@ export function ProjectChart({ data, loading }: ProjectChartProps) {
           </div>
           <ul className="min-w-0 divide-y divide-[#1B1B1B]" aria-label="Project chart legend">
             {slices.map((slice, index) => (
-              <li key={`${slice.fullLabel}-${index}`} className="grid min-w-0 grid-cols-[6px_minmax(0,1fr)] gap-x-2 px-3 py-2.5">
-                <span className="row-span-2 mt-0.5 h-8 w-1.5" style={{ background: CHART_COLORS[index] }} />
-                <span className="min-w-0 break-words font-mono text-[10px] font-semibold uppercase leading-4 tracking-[0.04em] text-[#111111] [overflow-wrap:anywhere]" title={slice.fullLabel}>{slice.label}</span>
-                <span aria-label={formatProjectMetric(slice.value, metric)} className="min-w-0 break-words font-mono text-[10px] leading-4 text-[#66645F] [overflow-wrap:anywhere]">{formatCompactProjectMetric(slice.value, metric)}</span>
+              <li key={`${slice.fullLabel}-${index}`} className="flex min-w-0 gap-2 px-3 py-2.5">
+                <span className="mt-0.5 h-8 w-1.5 shrink-0" style={{ background: CHART_COLORS[index] }} />
+                <span className="min-w-0">
+                  <span className="block break-words font-mono text-[10px] font-semibold uppercase leading-4 tracking-[0.04em] text-[#111111] [overflow-wrap:anywhere]" title={slice.fullLabel}>{slice.label}</span>
+                  <span aria-label={formatProjectMetric(slice.value, metric)} className="block break-words font-mono text-[10px] leading-4 text-[#66645F] [overflow-wrap:anywhere]">{formatCompactProjectMetric(slice.value, metric)}</span>
+                </span>
               </li>
             ))}
           </ul>

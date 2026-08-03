@@ -45,8 +45,8 @@ function BreakdownChart({ breakdown, colorFor, metric, modelShades = false, titl
       {slices.length === 0 ? (
         <p className="p-4 font-mono text-xs text-[#66645F]">No usage for this metric.</p>
       ) : (
-        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1fr)_12rem]">
-          <div className="h-64 min-w-0 border-b border-[#1B1B1B] p-4 lg:h-auto lg:min-h-72 lg:border-b-0 lg:border-r">
+        <div className="min-w-0">
+          <div className="h-64 min-w-0 border-b border-[#1B1B1B] p-4">
             <Doughnut
               data={{ labels: slices.map(slice => slice.label), datasets: [{ data: slices.map(slice => slice[metric]), backgroundColor: colors, borderColor: PAPER, borderWidth: 2 }] }}
               options={{
@@ -74,10 +74,12 @@ function BreakdownChart({ breakdown, colorFor, metric, modelShades = false, titl
           </div>
           <ul className="min-w-0 divide-y divide-[#1B1B1B]" aria-label={`${title} legend`}>
             {slices.map((slice, index) => (
-              <li key={slice.label} className="grid min-w-0 grid-cols-[6px_minmax(0,1fr)] gap-x-2 px-3 py-2.5">
-                <span className="row-span-2 mt-0.5 h-8 w-1.5" style={{ background: colors[index] }} />
-                <span className="min-w-0 break-words font-mono text-[10px] font-semibold uppercase leading-4 tracking-[0.04em] text-[#111111] [overflow-wrap:anywhere]">{slice.label}</span>
-                <span className="min-w-0 break-words font-mono text-[10px] leading-4 text-[#66645F] [overflow-wrap:anywhere]">{formatBreakdownValues(slice)}</span>
+              <li key={slice.label} className="flex min-w-0 gap-2 px-3 py-2.5">
+                <span className="mt-0.5 h-8 w-1.5 shrink-0" style={{ background: colors[index] }} />
+                <span className="min-w-0">
+                  <span className="block break-words font-mono text-[10px] font-semibold uppercase leading-4 tracking-[0.04em] text-[#111111] [overflow-wrap:anywhere]">{slice.label}</span>
+                  <span className="block break-words font-mono text-[10px] leading-4 text-[#66645F] [overflow-wrap:anywhere]">{formatBreakdownValues(slice)}</span>
+                </span>
               </li>
             ))}
           </ul>
@@ -100,7 +102,7 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
       <div className="flex flex-col gap-4 border-b border-[#1B1B1B] pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BC1010]">Unit breakdown</p>
-          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-7">
+          <dl className="mt-3 space-y-3">
             <div>
               <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[#66645F]">USD</dt>
               <dd className="mt-1 font-mono text-sm font-bold tabular-nums text-[#BC1010]">{formatProjectMetric(project.cost, 'usd')}</dd>
@@ -115,7 +117,7 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
             </div>
           </dl>
         </div>
-        <div role="group" aria-label="Project breakdown metric" className="grid w-fit grid-cols-2 border border-[#1B1B1B]">
+        <div role="group" aria-label="Project breakdown metric" className="flex w-fit flex-col border border-[#1B1B1B]">
           {(['usd', 'tokens'] as const).map(option => {
             const selected = metric === option;
             return (
@@ -127,7 +129,7 @@ export function ProjectDetails({ id, project }: ProjectDetailsProps) {
         </div>
       </div>
 
-      <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-2">
+      <div className="mt-4 min-w-0 space-y-4">
         <BreakdownChart breakdown={project.byModel} colorFor={colorForModel} metric={metric} modelShades title="By model" unit="Model matrix" />
         <BreakdownChart breakdown={project.byHarness} colorFor={colorForSource} metric={metric} title="By harness" unit="Harness matrix" />
       </div>

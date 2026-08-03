@@ -24,7 +24,7 @@ const PROJECT_PAGE_SIZE = 24;
 
 function DataCell({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className="min-w-0 border-t border-[#1B1B1B] pt-2 first:border-t-0 sm:border-l sm:border-t-0 sm:px-3 sm:first:pl-0">
+    <div className="min-w-0 border-t border-[#1B1B1B] py-2 first:border-t-0">
       <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#66645F]">{label}</dt>
       <dd className={`mt-1 min-w-0 break-words font-mono text-sm font-semibold tabular-nums [overflow-wrap:anywhere] ${emphasis ? 'text-[#BC1010]' : 'text-[#111111]'}`}>
         {value}
@@ -56,7 +56,7 @@ function ProjectSummaryCard({
           onClick={onToggle}
           className="group block min-h-11 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#BC1010]"
         >
-          <div className="grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] lg:gap-6">
+          <div className="min-w-0 p-4 sm:p-5">
             <div className="min-w-0">
               <div className="flex min-w-0 items-start gap-3">
                 <span
@@ -87,7 +87,7 @@ function ProjectSummaryCard({
               </div>
             </div>
 
-            <dl className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 border-t border-[#1B1B1B] pt-3 sm:grid-cols-4 sm:gap-x-0 sm:border-t-0 sm:pt-0 lg:items-start">
+            <dl className="mt-4 min-w-0 border-t border-[#1B1B1B] pt-2">
               <DataCell label="USD" value={formatProjectMetric(project.cost, 'usd')} emphasis />
               <DataCell label="Tokens" value={formatCompactProjectMetric(project.tokens, 'tokens')} />
               <DataCell label="Sessions" value={project.sessions.toLocaleString('en-US')} />
@@ -109,9 +109,9 @@ function ProjectsLoading() {
   return (
     <div className="border border-[#1B1B1B]" aria-label="Loading projects" aria-busy="true">
       {Array.from({ length: 5 }, (_, index) => (
-        <div key={index} className="grid animate-pulse gap-3 border-t border-[#1B1B1B] p-4 first:border-t-0 sm:grid-cols-[1.1fr_0.9fr] sm:p-5">
+        <div key={index} className="animate-pulse border-t border-[#1B1B1B] p-4 first:border-t-0 sm:p-5">
           <div className="h-14 bg-[#DEDDD7]" />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mt-3 space-y-2">
             {Array.from({ length: 4 }, (_, statIndex) => <div key={statIndex} className="h-14 bg-[#DEDDD7]" />)}
           </div>
         </div>
@@ -172,10 +172,10 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
           </div>
         </header>
 
-        <section aria-labelledby="projects-heading" className="grid border-b border-[#1B1B1B] lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
-          <div className="min-w-0 py-5 lg:pr-6 lg:py-7">
+        <section aria-labelledby="projects-heading" className="border-b border-[#1B1B1B]">
+          <div className="min-w-0 py-5 lg:py-7">
             <p className="max-w-xl text-sm leading-6 text-[#66645F]">Cost, token volume, model mix and harness mix for every recorded working directory.</p>
-            <dl className="mt-6 grid grid-cols-2 border-l border-t border-[#1B1B1B] sm:grid-cols-4">
+            <dl className="mt-6 border-l border-t border-[#1B1B1B]">
               <div className="min-w-0 border-b border-r border-[#1B1B1B] p-3">
                 <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[#66645F]">Projects</dt>
                 <dd className="mt-2 font-mono text-xl font-bold tabular-nums text-[#111111]">{!data ? '...' : totals.projects.toLocaleString('en-US')}</dd>
@@ -194,11 +194,9 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
               </div>
             </dl>
           </div>
-          <div className="min-w-0 py-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-l lg:border-[#1B1B1B] lg:py-7 lg:pl-6">
-            <ProjectChart data={data} loading={loading} />
-          </div>
+        </section>
 
-          <section aria-labelledby="project-browser-heading" className="pt-6 sm:pt-8 lg:col-start-1 lg:row-start-2 lg:border-t lg:border-[#1B1B1B] lg:pt-6">
+        <section aria-labelledby="project-browser-heading" className="pt-6 sm:pt-8">
           <div className="border-y-[3px] border-[#111111] py-3 sm:flex sm:items-end sm:justify-between sm:gap-6">
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BC1010]">Directory index</p>
@@ -209,7 +207,7 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
             <p className="mt-2 max-w-sm font-mono text-[10px] uppercase tracking-[0.08em] text-[#66645F] sm:mt-0 sm:text-right">Select a unit to inspect model and harness distribution.</p>
           </div>
 
-          <div className="grid gap-0 border-b border-[#1B1B1B] py-4 sm:grid-cols-[minmax(0,1fr)_12rem] sm:gap-3">
+          <div className="border-b border-[#1B1B1B] py-4">
             <div className="relative min-w-0 border border-[#1B1B1B] bg-[#F4F4F0]">
               <label className="sr-only" htmlFor="project-search">Search projects</label>
               <input
@@ -225,7 +223,7 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
                 <button type="button" aria-label="Clear project search" onClick={clearSearch} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center border-l border-[#1B1B1B] bg-[#DEDDD7] font-mono text-lg text-[#111111] hover:bg-[#BC1010] hover:text-[#F4F4F0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]">×</button>
               )}
             </div>
-            <div className="mt-3 min-w-0 sm:mt-0">
+            <div className="mt-3 min-w-0">
               <label className="sr-only" htmlFor="project-sort">Sort projects</label>
               <select id="project-sort" value={sort} onChange={event => setSort(event.target.value as ProjectSort)} className="min-h-11 w-full border border-[#1B1B1B] bg-[#F4F4F0] px-3 font-mono text-sm text-[#111111] outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#BC1010]">
                 {sortOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -264,6 +262,9 @@ export function ProjectsTable({ refreshKey = 0 }: ProjectsTableProps) {
             )}
           </div>
         </section>
+
+        <section aria-label="Project distribution" className="pt-6 sm:pt-8">
+          <ProjectChart data={data} loading={loading} />
         </section>
       </div>
     </div>
